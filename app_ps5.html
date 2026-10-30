@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game Library Renamer</title>
+<style>
+  /* Cores com contraste alto (texto secundario bem mais escuro que antes, para leitura nitida). */
+  :root {
+    --bg: #f4f5f7; --card: #ffffff; --text: #0e131b; --muted: #3c4454;
+    --border: #d3d8e0; --accent: #1f4fc4; --accent-text: #ffffff;
+    --ok: #12693a; --err: #a11d17; --warn: #7a4f00; --row-hover: #eef3ff; --novo: #12693a; --ph: #e6e9ef;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #13161c; --card: #1c2029; --text: #f3f5f9; --muted: #c4cbd8;
+      --border: #3a4152; --accent: #8aa9ff; --accent-text: #0d1220;
+      --ok: #74e2a4; --err: #ff9b92; --warn: #f5cb63; --row-hover: #262d3b; --novo: #74e2a4; --ph: #2a303c;
+    }
+  }
+  * { box-sizing: border-box; }
+  /* Layout em coluna do tamanho da janela: topo fixo e só a lista de jogos rola. */
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); display: flex; flex-direction: column; overflow: hidden;
+         font: 15px/1.4 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+         text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+  /* Textos pequenos e secundarios um pouco mais encorpados (Segoe fica fino demais nesses tamanhos). */
+  .dica, .meta, .local, .sub, .progresso, th, .campos label, footer { font-weight: 500; }
+  main { flex: 1; min-height: 0; width: 100%; max-width: 1180px; margin: 0 auto; padding: 16px 5px 8px;
+         display: flex; flex-direction: column; }
+  #abaFtp, #abaManual { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .card.lista { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-bottom: 0; }
+  .rolagem { flex: 1; min-height: 0; overflow: auto; }
+  .rolagem thead th { position: sticky; top: 0; background: var(--card); z-index: 1; }
+  .pastas-wrap { max-height: 132px; overflow: auto; }
+  .pastas li { display: flex; align-items: center; gap: 6px; padding: 1px 0; }
+  .pastas li .remover { padding: 0 6px; font-size: 12px; line-height: 16px; color: var(--err); }
+  .nova-pasta { display: flex; gap: 6px; margin-top: 6px; }
+  .nova-pasta input { flex: 1; max-width: 420px; font: 13px Consolas, monospace; }
+  .nova-pasta button { padding: 3px 10px; font-size: 13px; }
+  .topo { display: flex; align-items: flex-start; gap: 12px; }
+  .topo > div:first-child { flex: 1; }
+  .topo-acoes { display: flex; gap: 8px; align-items: center; }
+  h1 { font-size: 21px; margin: 0 0 2px; }
+  .sub { color: var(--muted); margin: 0 0 12px; font-size: 14px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+  textarea, input, select { padding: 6px 8px; border-radius: 7px; border: 1px solid var(--border);
+                            background: var(--bg); color: var(--text); font: inherit; }
+  textarea { width: 100%; min-height: 90px; resize: vertical; font: 14px/1.4 Consolas, monospace; }
+  .linha { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+  .campos { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+  .campos label { display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: var(--muted); }
+  button { border: 1px solid var(--border); background: var(--card); color: var(--text);
+           padding: 6px 12px; border-radius: 7px; cursor: pointer; font: inherit; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button.primario { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+  button:disabled { opacity: .5; cursor: default; }
+  .dica { color: var(--muted); font-size: 13px; }
+  .progresso { color: var(--muted); font-size: 13px; margin-left: auto; }
+  .abas { display: flex; gap: 4px; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .abas button { border: none; border-bottom: 3px solid transparent; border-radius: 0; background: none; padding: 6px 12px; color: var(--muted); }
+  .abas button.ativa { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  .abas .cache { margin-left: auto; }
+  .oculta { display: none !important; }
+  .pastas { margin: 6px 0 0; padding-left: 18px; font: 13px Consolas, monospace; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; }
+  tbody tr:hover { background: var(--row-hover); }
+  td.capa { width: 82px; padding-right: 0; }
+  .capa img, .capa .ph { width: 72px; height: 72px; border-radius: 8px; display: block; object-fit: cover; background: var(--ph); }
+  .jogo { font-weight: 600; }
+  .meta { font-size: 13px; color: var(--muted); }
+  .meta a { font-family: Consolas, monospace; }
+  .cid { font: 12px Consolas, monospace; color: var(--muted); word-break: break-all; }
+  .links { margin-top: 4px; display: flex; gap: 6px; }
+  .links button { padding: 2px 8px; font-size: 12px; }
+  .arq { font: 13px Consolas, monospace; word-break: break-all; }
+  .novo { color: var(--novo); }
+  .novo::before { content: "→ "; color: var(--muted); }
+  .local { color: var(--muted); font-size: 12px; }
+  td.st { width: 1%; white-space: nowrap; text-align: right; }
+  td.st button { margin-top: 4px; padding: 3px 10px; font-size: 13px; }
+  .renomear { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+  .ok { color: var(--ok); } .erro { color: var(--err); } .aviso-st { color: var(--warn); } .nomeok { font-weight: 700; }
+  .vazio { color: var(--muted); text-align: center; padding: 20px; }
+  .erros-pasta { color: var(--err); font-size: 13px; margin: 6px 0 0; }
+  footer { flex: none; position: relative; padding: 4px 16px 8px; color: var(--muted); font-size: 12px; text-align: center; }
+  /* Selo do desenvolvedor no canto inferior direito. */
+  .selo { position: absolute; right: 16px; bottom: 6px; display: inline-flex; align-items: center; gap: 6px;
+          padding: 2px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--card);
+          color: var(--muted); font-size: 11px; letter-spacing: .02em; }
+  .selo b { color: var(--accent); font-weight: 700; }
+  a { color: var(--accent); }
+  #aviso { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg);
+           padding: 8px 16px; border-radius: 8px; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 90vw; }
+  #aviso.visivel { opacity: 1; }
+  #encerrado { position: fixed; inset: 0; background: var(--bg); display: none; align-items: center; justify-content: center;
+               font-size: 17px; color: var(--muted); text-align: center; padding: 16px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="topo">
+    <div>
+      <h1 data-i18n="titulo"></h1>
+      <p class="sub" data-i18n-html="sub"></p>
+    </div>
+    <div class="topo-acoes">
+      <select id="selIdioma" title="Idioma / Language / Idioma">
+        <option value="pt-BR">Português (BR)</option>
+        <option value="en">English</option>
+        <option value="es">Español</option>
+      </select>
+      <button id="btnSair" data-i18n="btn_sair"></button>
+    </div>
+  </div>
+
+  <nav class="abas">
+    <button class="ativa" data-aba="abaFtp" data-i18n="aba_ftp"></button>
+    <button data-aba="abaManual" data-i18n="aba_manual"></button>
+    <span class="dica cache"><span id="baseInfo"></span> · <span id="cacheInfo"></span> · <span id="iconesInfo"></span> · <a href="#" id="lnkLimparCache" data-i18n="limpar_cache"></a></span>
+  </nav>
+
+  <!-- ===================== ABA FTP ===================== -->
+  <div id="abaFtp">
+    <section class="card">
+      <div class="campos">
+        <label><span data-i18n="lbl_protocolo"></span>
+          <select id="ftpProtocolo"><option value="ftp">FTP</option><option value="sftp">SFTP</option></select>
+        </label>
+        <label><span data-i18n="lbl_host"></span> <input id="ftpHost" placeholder="192.168.0.10" size="20"></label>
+        <label><span data-i18n="lbl_porta"></span> <input id="ftpPorta" value="2121" size="5"></label>
+        <label><span data-i18n="lbl_usuario"></span> <input id="ftpUsuario" data-i18n-ph="ph_usuario" size="14" autocomplete="off"></label>
+        <label><span data-i18n="lbl_senha"></span> <input id="ftpSenha" type="password" size="12" autocomplete="off"></label>
+        <button id="btnSalvar" data-i18n="btn_salvar"></button>
+        <button id="btnEditarIni" data-i18n="btn_editar_ini" data-i18n-title="tt_editar_ini"></button>
+        <button id="btnRecarregar" data-i18n="btn_recarregar" data-i18n-title="tt_recarregar"></button>
+        <button class="primario" id="btnConectar" data-i18n="btn_conectar"></button>
+        <span class="progresso" id="progFtp"></span>
+      </div>
+      <p class="dica" style="margin:8px 0 0"><span data-i18n="dica_payload_req"></span> <a href="#" class="lnk-ext" data-tipo="ftpsrv">github.com/ps5-payload-dev/ftpsrv</a></p>
+      <p class="dica" style="margin:4px 0 0" data-i18n="dica_payload"></p>
+      <p class="dica" style="margin:6px 0 0"><span data-i18n="pastas_dica_1"></span> <code id="caminhoIni">GameLibraryRenamer.ini</code>:</p>
+      <div class="pastas-wrap"><ul class="pastas" id="listaPastas"></ul></div>
+      <div class="nova-pasta">
+        <input id="novaPasta" data-i18n-ph="ph_nova_pasta" autocomplete="off">
+        <button id="btnAddPasta" data-i18n="btn_add_pasta"></button>
+      </div>
+      <div class="erros-pasta" id="errosPasta"></div>
+    </section>
+
+    <section class="card lista">
+      <div class="linha" style="margin-top:0;margin-bottom:8px">
+        <label class="dica"><input type="checkbox" id="chkSemCodigo"> <span data-i18n="chk_sem_codigo"></span></label>
+        <span class="progresso" id="resumoFtp"></span>
+      </div>
+      <div class="rolagem">
+        <table>
+          <thead><tr><th></th><th data-i18n="th_jogo"></th><th data-i18n="th_arquivo"></th><th style="text-align:right" data-i18n="th_status"></th></tr></thead>
+          <tbody id="corpoFtp"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== ABA MANUAL ===================== -->
+  <div id="abaManual" class="oculta">
+    <section class="card">
+      <textarea id="entrada" data-i18n-ph="ph_entrada"></textarea>
+      <div class="linha">
+        <button class="primario" id="btnConsultar" data-i18n="btn_consultar"></button>
+        <button id="btnLimpar" data-i18n="btn_limpar"></button>
+        <button id="btnCopiarTodos" disabled data-i18n="btn_copiar_todos"></button>
+        <button id="btnTxt" disabled data-i18n="btn_txt"></button>
+        <button id="btnCsv" disabled data-i18n="btn_csv"></button>
+        <span class="progresso" id="progresso"></span>
+      </div>
+    </section>
+
+    <section class="card lista">
+      <div class="rolagem">
+        <table>
+          <thead><tr><th></th><th data-i18n="th_jogo"></th><th data-i18n="th_nome_arquivo"></th><th style="text-align:right" data-i18n="th_status"></th></tr></thead>
+          <tbody id="corpo"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</main>
+<footer>Game Library Renamer <span id="versao"></span><span class="selo">developed by <b>PristMC</b></span></footer>
+<div id="aviso"></div>
+<div id="encerrado" data-i18n="encerrado"></div>
+
+<script>
+/* ======================= Idiomas ======================= */
+const TEXTOS = {
+  "pt-BR": {
+    titulo: "Game Library Renamer",
+    sub: "Nomes da base local (andshrew/PlayStation-Titles, atualizada ao abrir o app); ícones e o que faltar vêm do prosperopatches.com (PS5), orbispatches.com (PS4) e PS Store. Formato do nome: <code>Nome_do_Jogo_[PPSAXXXXX][US][PS5]</code>.",
+    btn_sair: "Sair", encerrado: "O Game Library Renamer foi encerrado. Pode fechar esta aba.",
+    aba_ftp: "Renomear no PS5", aba_manual: "Consulta manual",
+    base_ok: "Base local: {qtd} títulos", base_baixada: " (baixada {data})", base_carregando: "Base local: carregando…",
+    base_indisp: "Base local indisponível (usando só os sites)",
+    cache_info: "{n} jogos no cache", icones_info: "{n} ícones salvos", limpar_cache: "limpar cache",
+    lbl_protocolo: "Protocolo", lbl_host: "IP / endereço", lbl_porta: "Porta", lbl_usuario: "Usuário", ph_usuario: "(vazio = anônimo)",
+    lbl_senha: "Senha", btn_salvar: "Salvar", btn_conectar: "Conectar",
+    pastas_dica_1: "Pastas (só a raiz, sem subpastas) — salvas em", pastas_dica_2: "·", btn_editar_ini: "Editar INI", tt_editar_ini: "Abre o GameLibraryRenamer.ini no Bloco de Notas (depois de salvar, clique em Recarregar INI)",
+    btn_recarregar: "Recarregar INI", tt_recarregar: "Lê de novo o GameLibraryRenamer.ini (conexão e pastas)",
+    dica_payload: "Padrão do payload ftpsrv (o FTP mais usado no PS5): FTP, porta 2121, sem usuário e sem senha. FTP do etaHEN: porta 1337.",
+    ph_nova_pasta: "/caminho/da/pasta no PS5", btn_add_pasta: "Adicionar pasta", tit_remover_pasta: "Remover esta pasta",
+    av_pasta_incluida: "Pasta incluída", av_pasta_removida: "Pasta removida", av_pasta_repetida: "Essa pasta já está na lista",
+    e_pasta_invalida: "o caminho da pasta deve começar com /",
+    e_ini_invalido: "o arquivo de configuração tem um erro — corrija em Editar INI e clique em Recarregar INI ({detalhe})",
+    pasta_nao_testada: "não testada — clique em Conectar", pasta_existe: "✅ existe ({n} {itens})", item: "item", itens: "itens",
+    pasta_nao_existe: "❌ não existe", sem_pastas_ini: "nenhuma pasta configurada no INI",
+    chk_sem_codigo: "mostrar itens sem código no nome",
+    th_jogo: "Jogo", th_arquivo: "Arquivo: atual → novo", th_status: "Status", th_nome_arquivo: "Nome para arquivo",
+    vazio_ftp: "Clique em Conectar para ler as pastas do PS5.", vazio_sem_codigo: "Nenhum item com código de jogo no nome.",
+    vazio_manual: "Nenhuma consulta ainda. (Ctrl+Enter também consulta.)",
+    resumo: "{total} itens · {cod} com código · {prontos} prontos · {ok} NOME OK · {conf} conflitos",
+    st_sem_codigo: "sem código no nome", st_consultando: "consultando…", st_nome_ok: "NOME OK", st_nome_ok_agora: "NOME OK (renomeado agora)",
+    st_conflito_existe: "já existe item com esse nome", st_conflito_duplo: "outro item vai ficar com o mesmo nome",
+    st_pronto: "pronto para renomear", st_renomeando: "renomeando…", st_falhou: "falhou: {erro}",
+    st_nao_encontrado: "não encontrado", st_codigo_invalido: "código inválido", st_erro_http: "erro HTTP {n}",
+    st_erro_conexao: "erro de conexão: {d}", st_servidor: "servidor local não respondeu", st_ok: "ok",
+    btn_renomear: "Renomear", btn_copiar: "Copiar",
+    btn_loja: "Loja", tt_loja: "Fotos e vídeos oficiais na PlayStation Store", btn_youtube: "YouTube", tt_youtube: "Vídeos de gameplay no YouTube",
+    dica_payload_req: "Para conectar, o payload de FTP precisa estar ativo no PS5. Se ainda não tiver, baixe o ftpsrv em",
+    prog_conectando: "Conectando e lendo as pastas…", prog_jogos: "Consultando jogos {a} de {b}…",
+    prog_detalhes: "Carregando detalhes {a} de {b}…", prog_concluida: "Leitura concluída: nomes em {a}s, total {b}s.",
+    prog_consultando: "Consultando {a} de {b}…", prog_manual_fim: "{ok} de {n} encontrados: nomes em {a}s, total {b}s.",
+    av_informe_ip: "Informe o IP do PS5", av_erro: "Erro: {e}", falha_conexao: "Falha na conexão: {e}",
+    av_renomeado: "Renomeado!", av_salvo: "Dados do PS5 salvos no INI", av_erro_salvar: "Erro ao salvar: {e}",
+    av_pastas: "Conexão e pastas recarregadas do INI", av_copiado: "Copiado!", av_nao_copiou: "Não foi possível copiar",
+    av_cache_limpo: "Cache limpo ({n} jogos)", av_sem_codigos: "Nenhum código no formato PPSA00000 ou CUSA00000 encontrado",
+    ph_entrada: "Cole um ou vários códigos (PPSA08329, CUSA10249, ppsa-08330...) ou até uma lista de nomes de arquivos: o app acha os códigos sozinho.",
+    btn_consultar: "Consultar", btn_limpar: "Limpar", btn_copiar_todos: "Copiar todos os nomes", btn_txt: "Baixar TXT", btn_csv: "Baixar CSV",
+    e_protocolo_invalido: "protocolo deve ser FTP ou SFTP", e_informe_ip: "informe o IP/endereço do PS5",
+    e_falha_sftp: "falha no SFTP: {detalhe}", e_nome_invalido: "nome inválido", e_origem_sumiu: "'{nome}' não existe mais na pasta",
+    e_destino_existe: "já existe '{nome}' na pasta", e_sem_pastas: "nenhuma pasta configurada em {ini}",
+  },
+  en: {
+    titulo: "Game Library Renamer",
+    sub: "Names from the local database (andshrew/PlayStation-Titles, updated when the app opens); icons and anything missing come from prosperopatches.com (PS5), orbispatches.com (PS4) and the PS Store. Name format: <code>Game_Name_[PPSAXXXXX][US][PS5]</code>.",
+    btn_sair: "Exit", encerrado: "Game Library Renamer has been closed. You can close this tab.",
+    aba_ftp: "Rename on PS5", aba_manual: "Manual lookup",
+    base_ok: "Local database: {qtd} titles", base_baixada: " (downloaded {data})", base_carregando: "Local database: loading…",
+    base_indisp: "Local database unavailable (using websites only)",
+    cache_info: "{n} games cached", icones_info: "{n} icons saved", limpar_cache: "clear cache",
+    lbl_protocolo: "Protocol", lbl_host: "IP / address", lbl_porta: "Port", lbl_usuario: "User", ph_usuario: "(empty = anonymous)",
+    lbl_senha: "Password", btn_salvar: "Save", btn_conectar: "Connect",
+    pastas_dica_1: "Folders (root only, no subfolders) — saved in", pastas_dica_2: "·", btn_editar_ini: "Edit INI", tt_editar_ini: "Opens GameLibraryRenamer.ini in Notepad (after saving, click Reload INI)",
+    btn_recarregar: "Reload INI", tt_recarregar: "Reads GameLibraryRenamer.ini again (connection and folders)",
+    dica_payload: "ftpsrv payload defaults (the most used FTP on the PS5): FTP, port 2121, no user and no password. etaHEN FTP: port 1337.",
+    ph_nova_pasta: "/path/to/folder on the PS5", btn_add_pasta: "Add folder", tit_remover_pasta: "Remove this folder",
+    av_pasta_incluida: "Folder added", av_pasta_removida: "Folder removed", av_pasta_repetida: "This folder is already in the list",
+    e_pasta_invalida: "the folder path must start with /",
+    e_ini_invalido: "the settings file has an error — fix it with Edit INI and click Reload INI ({detalhe})",
+    pasta_nao_testada: "not tested — click Connect", pasta_existe: "✅ exists ({n} {itens})", item: "item", itens: "items",
+    pasta_nao_existe: "❌ does not exist", sem_pastas_ini: "no folder configured in the INI",
+    chk_sem_codigo: "show items without a code in the name",
+    th_jogo: "Game", th_arquivo: "File: current → new", th_status: "Status", th_nome_arquivo: "File name",
+    vazio_ftp: "Click Connect to read the PS5 folders.", vazio_sem_codigo: "No item with a game code in its name.",
+    vazio_manual: "No lookups yet. (Ctrl+Enter also searches.)",
+    resumo: "{total} items · {cod} with code · {prontos} ready · {ok} NAME OK · {conf} conflicts",
+    st_sem_codigo: "no code in the name", st_consultando: "looking up…", st_nome_ok: "NAME OK", st_nome_ok_agora: "NAME OK (just renamed)",
+    st_conflito_existe: "an item with this name already exists", st_conflito_duplo: "another item would get the same name",
+    st_pronto: "ready to rename", st_renomeando: "renaming…", st_falhou: "failed: {erro}",
+    st_nao_encontrado: "not found", st_codigo_invalido: "invalid code", st_erro_http: "HTTP error {n}",
+    st_erro_conexao: "connection error: {d}", st_servidor: "local server did not respond", st_ok: "ok",
+    btn_renomear: "Rename", btn_copiar: "Copy",
+    btn_loja: "Store", tt_loja: "Official screenshots and videos on the PlayStation Store", btn_youtube: "YouTube", tt_youtube: "Gameplay videos on YouTube",
+    dica_payload_req: "To connect, the FTP payload must be running on the PS5. If you do not have it yet, download ftpsrv at",
+    prog_conectando: "Connecting and reading folders…", prog_jogos: "Looking up games {a} of {b}…",
+    prog_detalhes: "Loading details {a} of {b}…", prog_concluida: "Done: names in {a}s, total {b}s.",
+    prog_consultando: "Looking up {a} of {b}…", prog_manual_fim: "{ok} of {n} found: names in {a}s, total {b}s.",
+    av_informe_ip: "Enter the PS5 IP", av_erro: "Error: {e}", falha_conexao: "Connection failed: {e}",
+    av_renomeado: "Renamed!", av_salvo: "PS5 settings saved to the INI", av_erro_salvar: "Error saving: {e}",
+    av_pastas: "Connection and folders reloaded from the INI", av_copiado: "Copied!", av_nao_copiou: "Could not copy",
+    av_cache_limpo: "Cache cleared ({n} games)", av_sem_codigos: "No code in the PPSA00000 or CUSA00000 format found",
+    ph_entrada: "Paste one or more codes (PPSA08329, CUSA10249, ppsa-08330...) or even a list of file names: the app finds the codes by itself.",
+    btn_consultar: "Look up", btn_limpar: "Clear", btn_copiar_todos: "Copy all names", btn_txt: "Download TXT", btn_csv: "Download CSV",
+    e_protocolo_invalido: "protocol must be FTP or SFTP", e_informe_ip: "enter the PS5 IP/address",
+    e_falha_sftp: "SFTP failure: {detalhe}", e_nome_invalido: "invalid name", e_origem_sumiu: "'{nome}' no longer exists in the folder",
+    e_destino_existe: "'{nome}' already exists in the folder", e_sem_pastas: "no folder configured in {ini}",
+  },
+  es: {
+    titulo: "Game Library Renamer",
+    sub: "Nombres de la base local (andshrew/PlayStation-Titles, actualizada al abrir la app); los iconos y lo que falte vienen de prosperopatches.com (PS5), orbispatches.com (PS4) y PS Store. Formato del nombre: <code>Nombre_del_Juego_[PPSAXXXXX][US][PS5]</code>.",
+    btn_sair: "Salir", encerrado: "Game Library Renamer se cerró. Puede cerrar esta pestaña.",
+    aba_ftp: "Renombrar en PS5", aba_manual: "Consulta manual",
+    base_ok: "Base local: {qtd} títulos", base_baixada: " (descargada {data})", base_carregando: "Base local: cargando…",
+    base_indisp: "Base local no disponible (usando solo los sitios)",
+    cache_info: "{n} juegos en caché", icones_info: "{n} iconos guardados", limpar_cache: "limpiar caché",
+    lbl_protocolo: "Protocolo", lbl_host: "IP / dirección", lbl_porta: "Puerto", lbl_usuario: "Usuario", ph_usuario: "(vacío = anónimo)",
+    lbl_senha: "Contraseña", btn_salvar: "Guardar", btn_conectar: "Conectar",
+    pastas_dica_1: "Carpetas (solo la raíz, sin subcarpetas) — guardadas en", pastas_dica_2: "·", btn_editar_ini: "Editar INI", tt_editar_ini: "Abre GameLibraryRenamer.ini en el Bloc de notas (después de guardar, haga clic en Recargar INI)",
+    btn_recarregar: "Recargar INI", tt_recarregar: "Lee de nuevo GameLibraryRenamer.ini (conexión y carpetas)",
+    dica_payload: "Valores del payload ftpsrv (el FTP más usado en la PS5): FTP, puerto 2121, sin usuario y sin contraseña. FTP de etaHEN: puerto 1337.",
+    ph_nova_pasta: "/ruta/de/la/carpeta en la PS5", btn_add_pasta: "Agregar carpeta", tit_remover_pasta: "Quitar esta carpeta",
+    av_pasta_incluida: "Carpeta agregada", av_pasta_removida: "Carpeta quitada", av_pasta_repetida: "Esa carpeta ya está en la lista",
+    e_pasta_invalida: "la ruta de la carpeta debe empezar con /",
+    e_ini_invalido: "el archivo de configuración tiene un error — corríjalo con Editar INI y haga clic en Recargar INI ({detalhe})",
+    pasta_nao_testada: "no probada — haga clic en Conectar", pasta_existe: "✅ existe ({n} {itens})", item: "elemento", itens: "elementos",
+    pasta_nao_existe: "❌ no existe", sem_pastas_ini: "ninguna carpeta configurada en el INI",
+    chk_sem_codigo: "mostrar elementos sin código en el nombre",
+    th_jogo: "Juego", th_arquivo: "Archivo: actual → nuevo", th_status: "Estado", th_nome_arquivo: "Nombre de archivo",
+    vazio_ftp: "Haga clic en Conectar para leer las carpetas de la PS5.", vazio_sem_codigo: "Ningún elemento con código de juego en el nombre.",
+    vazio_manual: "Ninguna consulta todavía. (Ctrl+Enter también consulta.)",
+    resumo: "{total} elementos · {cod} con código · {prontos} listos · {ok} NOMBRE OK · {conf} conflictos",
+    st_sem_codigo: "sin código en el nombre", st_consultando: "consultando…", st_nome_ok: "NOMBRE OK", st_nome_ok_agora: "NOMBRE OK (renombrado ahora)",
+    st_conflito_existe: "ya existe un elemento con ese nombre", st_conflito_duplo: "otro elemento quedaría con el mismo nombre",
+    st_pronto: "listo para renombrar", st_renomeando: "renombrando…", st_falhou: "falló: {erro}",
+    st_nao_encontrado: "no encontrado", st_codigo_invalido: "código inválido", st_erro_http: "error HTTP {n}",
+    st_erro_conexao: "error de conexión: {d}", st_servidor: "el servidor local no respondió", st_ok: "ok",
+    btn_renomear: "Renombrar", btn_copiar: "Copiar",
+    btn_loja: "Tienda", tt_loja: "Capturas y videos oficiales en PlayStation Store", btn_youtube: "YouTube", tt_youtube: "Videos de gameplay en YouTube",
+    dica_payload_req: "Para conectar, el payload de FTP debe estar activo en la PS5. Si aún no lo tiene, descargue ftpsrv en",
+    prog_conectando: "Conectando y leyendo las carpetas…", prog_jogos: "Consultando juegos {a} de {b}…",
+    prog_detalhes: "Cargando detalles {a} de {b}…", prog_concluida: "Lectura terminada: nombres en {a}s, total {b}s.",
+    prog_consultando: "Consultando {a} de {b}…", prog_manual_fim: "{ok} de {n} encontrados: nombres en {a}s, total {b}s.",
+    av_informe_ip: "Indique la IP de la PS5", av_erro: "Error: {e}", falha_conexao: "Fallo de conexión: {e}",
+    av_renomeado: "¡Renombrado!", av_salvo: "Datos de la PS5 guardados en el INI", av_erro_salvar: "Error al guardar: {e}",
+    av_pastas: "Conexión y carpetas recargadas del INI", av_copiado: "¡Copiado!", av_nao_copiou: "No se pudo copiar",
+    av_cache_limpo: "Caché limpiada ({n} juegos)", av_sem_codigos: "No se encontró ningún código en el formato PPSA00000 o CUSA00000",
+    ph_entrada: "Pegue uno o varios códigos (PPSA08329, CUSA10249, ppsa-08330...) o incluso una lista de nombres de archivo: la app encuentra los códigos sola.",
+    btn_consultar: "Consultar", btn_limpar: "Limpiar", btn_copiar_todos: "Copiar todos los nombres", btn_txt: "Descargar TXT", btn_csv: "Descargar CSV",
+    e_protocolo_invalido: "el protocolo debe ser FTP o SFTP", e_informe_ip: "indique la IP/dirección de la PS5",
+    e_falha_sftp: "fallo de SFTP: {detalhe}", e_nome_invalido: "nombre inválido", e_origem_sumiu: "'{nome}' ya no existe en la carpeta",
+    e_destino_existe: "ya existe '{nome}' en la carpeta", e_sem_pastas: "ninguna carpeta configurada en {ini}",
+  },
+};
+let idioma = "pt-BR";
+
+function t(chave, params = {}) {
+  const texto = TEXTOS[idioma]?.[chave] ?? TEXTOS["pt-BR"][chave] ?? chave;
+  return texto.replace(/\{(\w+)\}/g, (_, p) => params[p] ?? "");
+}
+
+// Status que vêm do servidor como texto fixo (em português sem acento) -> chave traduzida.
+function tStatus(s) {
+  if (!s) return "";
+  const fixos = { "ok": "st_ok", "nao encontrado": "st_nao_encontrado", "codigo invalido": "st_codigo_invalido",
+                  "servidor local não respondeu": "st_servidor" };
+  if (fixos[s]) return t(fixos[s]);
+  let m = s.match(/^erro HTTP (\d+)$/);
+  if (m) return t("st_erro_http", { n: m[1] });
+  m = s.match(/^erro de conexao: (.*)$/);
+  if (m) return t("st_erro_conexao", { d: m[1] });
+  return s;
+}
+
+// Erro devolvido pela API: usa a chave traduzida quando o servidor manda uma.
+const tErro = r => (r.chave && TEXTOS["pt-BR"]["e_" + r.chave]) ? t("e_" + r.chave, r.params || {}) : r.erro;
+
+function aplicarIdioma(novo) {
+  idioma = TEXTOS[novo] ? novo : "pt-BR";
+  document.documentElement.lang = idioma;
+  $("selIdioma").value = idioma;
+  document.querySelectorAll("[data-i18n]").forEach(el => el.textContent = t(el.dataset.i18n));
+  document.querySelectorAll("[data-i18n-html]").forEach(el => el.innerHTML = t(el.dataset.i18nHtml));
+  document.querySelectorAll("[data-i18n-ph]").forEach(el => el.placeholder = t(el.dataset.i18nPh));
+  document.querySelectorAll("[data-i18n-title]").forEach(el => el.title = t(el.dataset.i18nTitle));
+  mostrarBase(ultimaBase); mostrarContadores(); mostrarPastas(ultimasPastas, ultimaSituacao);
+  renderizarFtp(); renderizar();
+}
+
+function idiomaDoNavegador() {
+  const l = (navigator.language || "").toLowerCase();
+  return l.startsWith("pt") ? "pt-BR" : l.startsWith("es") ? "es" : "en";
+}
+
+/* ======================= Utilitários ======================= */
+const $ = id => document.getElementById(id);
+const CAMPOS = ["title_id", "plataforma", "nome", "nome_arquivo", "content_id", "publisher", "publisher_id", "regiao", "url", "icone", "status"];
+const PARALELO = 3;      // consultas simultâneas
+const PAUSA_MS = 250;    // pausa de cada "fila" após uma consulta que foi ao site
+const espera = ms => new Promise(r => setTimeout(r, ms));
+let resultados = [];
+let ultimaBase = null, ultimasPastas = [], ultimaSituacao = null, contadores = { cache: 0, icones: 0 };
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function avisar(msg, ms = 1800) {
+  const el = $("aviso");
+  el.textContent = msg;
+  el.classList.add("visivel");
+  clearTimeout(avisar.t);
+  avisar.t = setTimeout(() => el.classList.remove("visivel"), ms);
+}
+
+async function copiar(texto) {
+  try { await navigator.clipboard.writeText(texto); avisar(t("av_copiado")); }
+  catch { avisar(t("av_nao_copiou")); }
+}
+
+async function postJson(url, dados) {
+  const resp = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(dados) });
+  return resp.json();
+}
+
+// /api/consulta: base local (instantâneo) ou site. /api/detalhes: publisher (sempre do site, com cache).
+async function buscarApi(rota, codigo) {
+  try {
+    const resp = await fetch(`/api/${rota}?codigo=` + encodeURIComponent(codigo));
+    return await resp.json();
+  } catch {
+    return { title_id: codigo, status: "servidor local não respondeu" };
+  }
+}
+const consultarCodigo = codigo => buscarApi("consulta", codigo);
+const detalhesCodigo = codigo => buscarApi("detalhes", codigo);
+
+// Busca vários códigos com PARALELO filas ao mesmo tempo; aoReceber(codigo, resultado, feitos, total).
+async function consultarLista(codigos, aoReceber, buscar = consultarCodigo) {
+  let proximo = 0, feitos = 0;
+  async function fila() {
+    while (proximo < codigos.length) {
+      const codigo = codigos[proximo++];
+      const r = await buscar(codigo);
+      aoReceber(codigo, r, ++feitos, codigos.length);
+      if (!r.cache && proximo < codigos.length) await espera(PAUSA_MS); // não sobrecarregar o site
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(PARALELO, codigos.length) }, fila));
+  await atualizarCache();
+}
+
+function mostrarBase(base) {
+  ultimaBase = base;
+  if (!base) { $("baseInfo").textContent = t("base_carregando"); return; }
+  $("baseInfo").textContent = base.situacao === "ok"
+    ? t("base_ok", { qtd: base.qtd.toLocaleString(idioma) }) + (base.atualizada_em ? t("base_baixada", { data: base.atualizada_em }) : "")
+    : base.situacao === "carregando" ? t("base_carregando") : t("base_indisp");
+  $("baseInfo").title = base.erro || "";
+}
+
+function mostrarContadores(cfg) {
+  if (cfg) contadores = { cache: cfg.cache_qtd, icones: cfg.icones_qtd };
+  $("cacheInfo").textContent = t("cache_info", { n: contadores.cache });
+  $("iconesInfo").textContent = t("icones_info", { n: contadores.icones });
+}
+
+async function atualizarCache() {
+  try {
+    const cfg = await (await fetch("/api/config")).json();
+    if (cfg.ok === false) return;  // INI com erro: o aviso já foi mostrado por carregarConfig
+    mostrarContadores(cfg);
+    mostrarBase(cfg.base);
+    if (cfg.base?.situacao === "carregando") setTimeout(atualizarCache, 2000);
+  } catch { /* ignora */ }
+}
+
+// Completa o publisher por extenso dos resultados que vieram da base local; aoReceber(codigo, detalhes).
+async function completarDetalhes(resultadosBase, aoReceber, progresso) {
+  const codigos = [...new Set(resultadosBase.filter(r => r && r.fonte === "base" && !r.icone).map(r => r.title_id))];
+  if (!codigos.length) return;
+  await consultarLista(codigos, (codigo, d, feitos, total) => {
+    if (d.status === "ok") aoReceber(codigo, d);
+    progresso.textContent = t("prog_detalhes", { a: feitos, b: total });
+  }, detalhesCodigo);
+}
+
+// Junta ícone/publisher do site no resultado da base (nome e nome do arquivo continuam os da base).
+const juntarDetalhes = (r, d) => ({ ...r, icone: d.icone || r.icone, publisher: d.publisher || r.publisher });
+
+// Células comuns às duas abas: capa e bloco do jogo.
+// O ícone vem do servidor local (/icone/CODIGO), que guarda a imagem no computador na primeira vez.
+function celCapa(r) {
+  return r?.status === "ok"
+    ? `<td class="capa"><img src="/icone/${encodeURIComponent(r.title_id)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'ph'}))"></td>`
+    : '<td class="capa"><div class="ph"></div></td>';
+}
+
+function celJogo(r, codigo) {
+  if (!r || r.status !== "ok") return `<td><div class="meta">${esc(r?.title_id || codigo)}</div></td>`;
+  const publisher = r.publisher ? esc(r.publisher) + (r.publisher_id ? ` (${esc(r.publisher_id)})` : "") : esc(r.publisher_id);
+  // Link do código: abre no navegador padrão pelo servidor (um <a target=_blank> abriria um pop-up pequeno da janela do app).
+  const meta = [`<a href="#" class="lnk-ext" data-tipo="patches" data-codigo="${esc(r.title_id)}">${esc(r.title_id)}</a>`, esc(r.plataforma), esc(r.regiao),
+                publisher].filter(Boolean).join(" · ");
+  // Fotos e videos: pagina oficial na PlayStation Store (quando a base tem o conceptId) e busca no YouTube.
+  const loja = r.concept_id
+    ? `<button class="lnk-ext" data-tipo="loja" data-concept="${esc(r.concept_id)}" title="${esc(t("tt_loja"))}">${esc(t("btn_loja"))}</button>` : "";
+  const youtube = `<button class="lnk-ext" data-tipo="youtube" data-nome="${esc(r.nome)}" title="${esc(t("tt_youtube"))}">${esc(t("btn_youtube"))}</button>`;
+  return `<td><div class="jogo">${esc(r.nome)}</div><div class="meta">${meta}</div><div class="cid">${esc(r.content_id)}</div>`
+       + `<div class="links">${loja}${youtube}</div></td>`;
+}
+
+/* ======================= Topo: abas, idioma, cache, sair ======================= */
+document.querySelectorAll(".abas button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".abas button").forEach(x => x.classList.toggle("ativa", x === b));
+  ["abaFtp", "abaManual"].forEach(id => $(id).classList.toggle("oculta", id !== b.dataset.aba));
+});
+$("lnkLimparCache").onclick = async e => {
+  e.preventDefault();
+  const r = await postJson("/api/limpar-cache", {});
+  infoPorCodigo = {};
+  avisar(t("av_cache_limpo", { n: r.removidos }));
+  atualizarCache();
+};
+$("selIdioma").onchange = () => {
+  aplicarIdioma($("selIdioma").value);
+  postJson("/api/idioma", { idioma }).catch(() => {});
+};
+$("btnSair").onclick = async () => {
+  try { await postJson("/api/sair", {}); } catch { /* já encerrado */ }
+  $("encerrado").style.display = "flex";
+};
+
+/* ======================= Aba FTP ======================= */
+let itensFtp = [];          // {pasta, nome, tipo, codigo, info, novo, estado, msg: [chave, params]}
+let infoPorCodigo = {};
+const PORTA_PADRAO = { ftp: "2121", sftp: "22" };
+
+// Aceita colar a URL completa (sftp://host:porta) no campo de endereço.
+function lerUrlNoHost() {
+  const m = $("ftpHost").value.trim().match(/^(s?ftp):\/\/([^\/:]+)(?::(\d+))?\/?$/i);
+  if (!m) return;
+  $("ftpProtocolo").value = m[1].toLowerCase();
+  $("ftpHost").value = m[2];
+  $("ftpPorta").value = m[3] || PORTA_PADRAO[m[1].toLowerCase()];
+}
+
+function conexao() {
+  lerUrlNoHost();
+  return { protocolo: $("ftpProtocolo").value, host: $("ftpHost").value.trim(), porta: $("ftpPorta").value.trim(),
+           usuario: $("ftpUsuario").value, senha: $("ftpSenha").value };
+}
+
+// situacao: [{pasta, existe, qtd, erro}] vinda do Conectar; sem ela as pastas aparecem como "não testada".
+function mostrarPastas(pastas, situacao) {
+  ultimasPastas = pastas || []; ultimaSituacao = situacao || null;
+  const porPasta = Object.fromEntries((situacao || []).map(s => [s.pasta, s]));
+  $("listaPastas").innerHTML = ultimasPastas.length
+    ? ultimasPastas.map(p => {
+        const s = porPasta[p];
+        const st = !s ? `<span class="dica">${esc(t("pasta_nao_testada"))}</span>`
+          : s.existe ? `<span class="ok">${esc(t("pasta_existe", { n: s.qtd, itens: t(s.qtd === 1 ? "item" : "itens") }))}</span>`
+          : `<span class="erro">${esc(t("pasta_nao_existe"))}${s.erro ? ` <span class="dica">(${esc(s.erro)})</span>` : ""}</span>`;
+        return `<li><button class="remover" data-pasta="${esc(p)}" title="${esc(t("tit_remover_pasta"))}">✕</button> ${esc(p)} — ${st}</li>`;
+      }).join("")
+    : `<li class="erro">${esc(t("sem_pastas_ini"))}</li>`;
+}
+
+// Inclui/exclui pastas pela tela: grava a lista inteira no INI.
+async function gravarPastas(pastas, aviso) {
+  const r = await postJson("/api/pastas", { pastas });
+  if (!r.ok) { avisar(t("av_erro", { e: tErro(r) }), 4000); return false; }
+  // Mantém o resultado do último Conectar para as pastas que continuam na lista.
+  mostrarPastas(r.pastas, (ultimaSituacao || []).filter(s => r.pastas.includes(s.pasta)));
+  avisar(t(aviso));
+  return true;
+}
+
+async function adicionarPasta() {
+  const pasta = $("novaPasta").value.trim();
+  if (!pasta) return;
+  if (!pasta.startsWith("/")) { avisar(t("e_pasta_invalida"), 3000); return; }
+  if (ultimasPastas.includes(pasta)) { avisar(t("av_pasta_repetida"), 3000); return; }
+  if (await gravarPastas([...ultimasPastas, pasta], "av_pasta_incluida")) $("novaPasta").value = "";
+}
+
+async function carregarConfig(preencherConexao) {
+  const cfg = await (await fetch("/api/config")).json();
+  if (cfg.ok === false) {
+    // INI com erro (ex.: editado no Bloco de Notas): mostra o problema e mantém a tela como está.
+    $("errosPasta").textContent = tErro(cfg);
+    avisar(t("av_erro", { e: tErro(cfg) }), 8000);
+    return cfg;
+  }
+  $("errosPasta").textContent = "";
+  if (preencherConexao) {
+    $("ftpProtocolo").value = cfg.protocolo; $("ftpHost").value = cfg.host; $("ftpPorta").value = cfg.porta;
+    $("ftpUsuario").value = cfg.usuario; $("ftpSenha").value = cfg.senha;
+  }
+  $("caminhoIni").textContent = cfg.arquivo_ini;
+  $("versao").textContent = "v" + cfg.versao;
+  mostrarContadores(cfg);
+  mostrarBase(cfg.base);
+  mostrarPastas(cfg.pastas);
+  // Enquanto a base local carrega/baixa ao abrir o app, confere de novo a cada 2s.
+  if (cfg.base?.situacao === "carregando") setTimeout(atualizarCache, 2000);
+  return cfg;
+}
+
+function extensao(item) {
+  if (item.tipo !== "arquivo") return "";
+  const m = item.nome.match(/\.[A-Za-z0-9]{1,5}$/);
+  return m ? m[0] : "";
+}
+
+// Calcula o novo nome e se o item pode ser renomeado (sem sobrescrever nada).
+function recalcular() {
+  const existentes = {}, alvos = {};
+  for (const it of itensFtp) (existentes[it.pasta] ??= new Set()).add(it.nome);
+  for (const it of itensFtp) {
+    it.novo = it.info?.status === "ok" ? it.info.nome_arquivo + extensao(it) : "";
+    if (it.novo && it.novo !== it.nome) {
+      const chave = it.pasta + "\n" + it.novo;
+      alvos[chave] = (alvos[chave] || 0) + 1;
+    }
+  }
+  for (const it of itensFtp) {
+    if (it.estado === "renomeando") continue;
+    if (!it.codigo) { it.estado = "neutro"; it.msg = ["st_sem_codigo"]; continue; }
+    if (!it.info || it.info.status === "pendente") { it.estado = "pendente"; it.msg = ["st_consultando"]; continue; }
+    if (it.info.status !== "ok") { it.estado = "erro"; it.msg = ["#status", it.info.status]; continue; }
+    if (it.novo === it.nome) { it.estado = "feito"; it.msg = [it.renomeado ? "st_nome_ok_agora" : "st_nome_ok"]; continue; }
+    if (existentes[it.pasta].has(it.novo)) { it.estado = "conflito"; it.msg = ["st_conflito_existe"]; continue; }
+    if (alvos[it.pasta + "\n" + it.novo] > 1) { it.estado = "conflito"; it.msg = ["st_conflito_duplo"]; continue; }
+    if (it.erroRenomear) { it.estado = "erro"; it.msg = ["st_falhou", { erro: it.erroRenomear }]; it.pronto = true; continue; }
+    it.estado = "pronto"; it.msg = ["st_pronto"];
+  }
+  renderizarFtp();
+}
+
+const textoMsg = msg => !msg ? "" : msg[0] === "#status" ? tStatus(msg[1]) : t(msg[0], msg[1]);
+
+function renderizarFtp() {
+  const mostrarSem = $("chkSemCodigo").checked;
+  // Itens com NOME OK vão para o final da lista; os demais mantêm a ordem das pastas.
+  const visiveis = itensFtp.map((it, i) => [it, i]).filter(([it]) => mostrarSem || it.codigo)
+    .sort(([a, ia], [b, ib]) => (a.estado === "feito") - (b.estado === "feito") || ia - ib);
+  const qtd = s => itensFtp.filter(it => it.estado === s).length;
+  $("resumoFtp").textContent = itensFtp.length
+    ? t("resumo", { total: itensFtp.length, cod: itensFtp.filter(it => it.codigo).length, prontos: qtd("pronto"), ok: qtd("feito"), conf: qtd("conflito") })
+    : "";
+  if (!visiveis.length) {
+    $("corpoFtp").innerHTML = `<tr><td colspan="4" class="vazio">${esc(t(itensFtp.length ? "vazio_sem_codigo" : "vazio_ftp"))}</td></tr>`;
+    return;
+  }
+  const classe = { pronto: "ok", feito: "ok nomeok", erro: "erro", conflito: "aviso-st", pendente: "dica", neutro: "dica", renomeando: "dica" };
+  $("corpoFtp").innerHTML = visiveis.map(([it, i]) => {
+    const icone = it.tipo === "pasta" ? "📁" : "📄";
+    const podeRenomear = it.estado === "pronto" || (it.estado === "erro" && it.pronto);
+    return `<tr>
+      ${celCapa(it.info)}
+      ${celJogo(it.info, it.codigo)}
+      <td>
+        <div class="arq">${icone} ${esc(it.nome)}</div>
+        ${it.novo && it.novo !== it.nome ? `<div class="arq novo">${esc(it.novo)}</div>` : ""}
+        <div class="local">${esc(it.pasta)}</div>
+      </td>
+      <td class="st"><div class="${classe[it.estado] || ""}">${esc(textoMsg(it.msg))}</div>
+        ${podeRenomear ? `<button class="renomear" data-i="${i}">${esc(t("btn_renomear"))}</button>` : ""}</td>
+    </tr>`;
+  }).join("");
+}
+
+async function conectarFtp() {
+  const con = conexao();
+  if (!con.host) { avisar(t("av_informe_ip")); return; }
+  $("btnConectar").disabled = true;
+  $("errosPasta").textContent = "";
+  $("progFtp").textContent = t("prog_conectando");
+  try {
+    const r = await postJson("/api/escanear", con);
+    if (!r.ok) {
+      $("progFtp").textContent = "";
+      avisar(t("av_erro", { e: tErro(r) }), 5000);
+      $("errosPasta").textContent = t("falha_conexao", { e: tErro(r) });
+      return;
+    }
+    mostrarPastas(r.pastas, r.situacao);
+    itensFtp = r.itens.map(it => ({ ...it, info: it.codigo ? (infoPorCodigo[it.codigo] || null) : null }));
+    recalcular();
+
+    const codigos = [...new Set(itensFtp.filter(it => it.codigo && !infoPorCodigo[it.codigo]).map(it => it.codigo))];
+    const inicio = Date.now();
+    await consultarLista(codigos, (codigo, info, feitos, total) => {
+      infoPorCodigo[codigo] = info;
+      itensFtp.forEach(it => { if (it.codigo === codigo) it.info = info; });
+      $("progFtp").textContent = t("prog_jogos", { a: feitos, b: total });
+      recalcular();
+    });
+    const tempoNomes = ((Date.now() - inicio) / 1000).toFixed(1);
+    await completarDetalhes(Object.values(infoPorCodigo), (codigo, d) => {
+      infoPorCodigo[codigo] = juntarDetalhes(infoPorCodigo[codigo], d);
+      itensFtp.forEach(it => { if (it.codigo === codigo) it.info = infoPorCodigo[codigo]; });
+      renderizarFtp();
+    }, $("progFtp"));
+    $("progFtp").textContent = t("prog_concluida", { a: tempoNomes, b: ((Date.now() - inicio) / 1000).toFixed(1) });
+  } catch (e) {
+    $("progFtp").textContent = "";
+    avisar(t("st_servidor"), 4000);
+  } finally {
+    $("btnConectar").disabled = false;
+  }
+}
+
+async function renomearItem(i) {
+  const it = itensFtp[i];
+  it.estado = "renomeando"; it.msg = ["st_renomeando"]; renderizarFtp();
+  try {
+    const r = await postJson("/api/renomear", { ...conexao(), pasta: it.pasta, de: it.nome, para: it.novo });
+    it.estado = "";
+    if (r.ok) { it.nome = it.novo; it.renomeado = true; it.erroRenomear = ""; avisar(t("av_renomeado")); }
+    else { it.erroRenomear = tErro(r); }
+  } catch {
+    it.estado = ""; it.erroRenomear = t("st_servidor");
+  }
+  recalcular();
+}
+
+$("btnConectar").onclick = conectarFtp;
+$("btnSalvar").onclick = async () => {
+  const r = await postJson("/api/config", conexao());
+  avisar(r.ok ? t("av_salvo") : t("av_erro_salvar", { e: tErro(r) }), 3000);
+};
+$("btnEditarIni").onclick = async () => {
+  const r = await postJson("/api/editar-ini", {});
+  if (!r.ok) avisar(t("av_erro", { e: tErro(r) }), 4000);
+};
+$("btnRecarregar").onclick = () => carregarConfig(true).then(() => avisar(t("av_pastas")));
+$("chkSemCodigo").onchange = renderizarFtp;
+$("btnAddPasta").onclick = adicionarPasta;
+$("novaPasta").addEventListener("keydown", e => { if (e.key === "Enter") adicionarPasta(); });
+$("listaPastas").addEventListener("click", e => {
+  const b = e.target.closest(".remover");
+  if (b) gravarPastas(ultimasPastas.filter(p => p !== b.dataset.pasta), "av_pasta_removida");
+});
+$("ftpHost").addEventListener("change", lerUrlNoHost);
+$("ftpProtocolo").onchange = () => {
+  // Troca a porta só se ainda estiver na porta padrão do outro protocolo.
+  if (Object.values(PORTA_PADRAO).includes($("ftpPorta").value.trim())) $("ftpPorta").value = PORTA_PADRAO[$("ftpProtocolo").value];
+};
+// Links externos (Loja, YouTube, GitHub do ftpsrv): o servidor monta o link e abre no navegador padrão.
+document.addEventListener("click", async e => {
+  const b = e.target.closest(".lnk-ext");
+  if (!b) return;
+  e.preventDefault();
+  const r = await postJson("/api/abrir-link", { tipo: b.dataset.tipo, concept_id: b.dataset.concept || "", nome: b.dataset.nome || "",
+                                                codigo: b.dataset.codigo || "", idioma });
+  if (!r.ok) avisar(t("av_erro", { e: tErro(r) }), 4000);
+});
+$("corpoFtp").addEventListener("click", e => {
+  const b = e.target.closest(".renomear");
+  if (b) { b.disabled = true; renomearItem(Number(b.dataset.i)); }
+});
+["ftpHost", "ftpPorta", "ftpUsuario", "ftpSenha"].forEach(id =>
+  $(id).addEventListener("keydown", e => { if (e.key === "Enter") conectarFtp(); }));
+
+/* ======================= Aba manual ======================= */
+function extrairCodigos(texto) {
+  const achados = texto.toUpperCase().match(/[A-Z]{4}[-_ ]?\d{5}/g) || [];
+  return [...new Set(achados.map(c => c.replace(/[-_ ]/, "")))];
+}
+
+function renderizar() {
+  const ok = resultados.filter(r => r.status === "ok");
+  ["btnCopiarTodos", "btnTxt"].forEach(id => $(id).disabled = ok.length === 0);
+  $("btnCsv").disabled = resultados.length === 0;
+  if (!resultados.length) {
+    $("corpo").innerHTML = `<tr><td colspan="4" class="vazio">${esc(t("vazio_manual"))}</td></tr>`;
+    return;
+  }
+  $("corpo").innerHTML = resultados.map((r, i) => {
+    const okRow = r.status === "ok";
+    return `<tr>
+      ${celCapa(r)}
+      ${celJogo(r)}
+      <td>${okRow ? `<div class="arq">${esc(r.nome_arquivo)}</div>` : ""}</td>
+      <td class="st"><div class="${okRow ? "ok" : r.status === "pendente" ? "dica" : "erro"}">${esc(r.status === "pendente" ? t("st_consultando") : tStatus(r.status))}</div>
+        ${okRow ? `<button class="copiar" data-i="${i}">${esc(t("btn_copiar"))}</button>` : ""}</td>
+    </tr>`;
+  }).join("");
+}
+
+async function consultarTodos() {
+  const codigos = extrairCodigos($("entrada").value);
+  if (!codigos.length) { avisar(t("av_sem_codigos")); return; }
+  $("btnConsultar").disabled = true;
+  resultados = codigos.map(c => ({ title_id: c, status: "pendente" }));
+  renderizar();
+  const inicio = Date.now();
+  await consultarLista(codigos, (codigo, r, feitos, total) => {
+    resultados[codigos.indexOf(codigo)] = r;
+    $("progresso").textContent = t("prog_consultando", { a: feitos, b: total });
+    renderizar();
+  });
+  const tempoNomes = ((Date.now() - inicio) / 1000).toFixed(1);
+  await completarDetalhes(resultados, (codigo, d) => {
+    const i = codigos.indexOf(codigo);
+    resultados[i] = juntarDetalhes(resultados[i], d);
+    renderizar();
+  }, $("progresso"));
+  const qtdOk = resultados.filter(r => r.status === "ok").length;
+  $("progresso").textContent = t("prog_manual_fim", { ok: qtdOk, n: codigos.length, a: tempoNomes, b: ((Date.now() - inicio) / 1000).toFixed(1) });
+  $("btnConsultar").disabled = false;
+}
+
+function baixar(nome, conteudo, tipo) {
+  const url = URL.createObjectURL(new Blob([conteudo], { type: tipo }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: nome });
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+const nomesOk = () => resultados.filter(r => r.status === "ok").map(r => r.nome_arquivo).join("\n");
+
+$("btnConsultar").onclick = consultarTodos;
+$("entrada").addEventListener("keydown", e => { if (e.key === "Enter" && e.ctrlKey) consultarTodos(); });
+$("btnLimpar").onclick = () => { $("entrada").value = ""; resultados = []; $("progresso").textContent = ""; renderizar(); };
+$("btnCopiarTodos").onclick = () => copiar(nomesOk());
+$("btnTxt").onclick = () => baixar("nomes_ps5.txt", nomesOk() + "\n", "text/plain;charset=utf-8");
+$("btnCsv").onclick = () => {
+  const cel = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const linhas = [CAMPOS.join(";"), ...resultados.map(r => CAMPOS.map(c => cel(r[c])).join(";"))];
+  baixar("game_library_renamer.csv", "﻿" + linhas.join("\r\n"), "text/csv;charset=utf-8");
+};
+$("corpo").addEventListener("click", e => {
+  const b = e.target.closest(".copiar");
+  if (b) copiar(resultados[b.dataset.i].nome_arquivo);
+});
+
+/* ======================= Sinal de vida ======================= */
+// Avisa o app que a tela está aberta; ao fechar a tela, avisa para o app se encerrar
+// (sem isso ele poderia ficar rodando escondido e prender os arquivos numa atualização).
+setInterval(() => fetch("/api/ping").catch(() => {}), 5000);
+fetch("/api/ping").catch(() => {});
+// fetch com keepalive (o sendBeacon não envia Content-Type JSON, que o servidor exige).
+window.addEventListener("pagehide", () =>
+  fetch("/api/fechou", { method: "POST", keepalive: true, headers: { "Content-Type": "application/json" }, body: "{}" }).catch(() => {}));
+
+/* ======================= Início ======================= */
+aplicarIdioma(idiomaDoNavegador());
+carregarConfig(true).then(cfg => { if (cfg.idioma) aplicarIdioma(cfg.idioma); });
+</script>
+</body>
+</html>

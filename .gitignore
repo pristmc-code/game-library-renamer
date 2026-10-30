@@ -1,0 +1,24 @@
+# Settings (may contain the PS5/FTP password) and data generated at runtime
+*.ini
+cache_consultas.json
+cache_consultas.tmp
+base_titulos.tsv
+base_titulos.tmp
+base_titulos.json
+icones/
+janela/
+
+# Python
+__pycache__/
+*.pyc
+
+# Build output (installers are published as GitHub Releases)
+instalador/saida/
+build/
+dist/
+
+# Local tooling / notes
+__BACKUPS/
+*.bak
+.playwright-mcp/
+HANDOFF.md
