@@ -59,7 +59,7 @@ CABECALHO_INI = """\
 
 """
 
-PASTAS_EXEMPLO = {"folder1": "/data/homebrew/", "folder2": "/mnt/ext0/homebrew/"}
+PASTAS_EXEMPLO = {"folder1": "/data/homebrew/", "folder2": "/mnt/ext1/homebrew/"}
 
 # Nomes em ingles (atuais) e em portugues (INIs gravados antes): le os dois, grava sempre em ingles.
 SECAO_PASTAS = ("folders", "pastas")

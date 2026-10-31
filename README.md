@@ -44,7 +44,7 @@ When uninstalling you can choose whether to also delete your settings and cached
    [ftpsrv](https://github.com/ps5-payload-dev/ftpsrv), the most used one: **FTP, port 2121, no user,
    no password**. The etaHEN FTP uses port **1337**.
 2. In the app, enter the PS5 IP address, click **Save** and **Connect**.
-3. Add or remove folders right in the app (defaults: `/data/homebrew/` and `/mnt/ext0/homebrew/`).
+3. Add or remove folders right in the app (defaults: `/data/homebrew/` and `/mnt/ext1/homebrew/`).
 4. Click **Rename** on each game you want to rename.
 
 ## Settings file
@@ -64,7 +64,7 @@ password =
 
 [folders]
 folder1 = /data/homebrew/
-folder2 = /mnt/ext0/homebrew/
+folder2 = /mnt/ext1/homebrew/
 ```
 
 > The password is stored as plain text in this file.

@@ -621,9 +621,11 @@ const textoMsg = msg => !msg ? "" : msg[0] === "#status" ? tStatus(msg[1]) : t(m
 
 function renderizarFtp() {
   const mostrarSem = $("chkSemCodigo").checked;
-  // Itens com NOME OK vão para o final da lista; os demais mantêm a ordem das pastas.
+  // Itens que já estavam com NOME OK ao CONECTAR vão para o final da lista; os demais mantêm a
+  // ordem das pastas. Quem foi renomeado agora fica onde está, para dar para ver o novo nome.
+  const okAoConectar = it => it.estado === "feito" && !it.renomeado;
   const visiveis = itensFtp.map((it, i) => [it, i]).filter(([it]) => mostrarSem || it.codigo)
-    .sort(([a, ia], [b, ib]) => (a.estado === "feito") - (b.estado === "feito") || ia - ib);
+    .sort(([a, ia], [b, ib]) => okAoConectar(a) - okAoConectar(b) || ia - ib);
   const qtd = s => itensFtp.filter(it => it.estado === s).length;
   $("resumoFtp").textContent = itensFtp.length
     ? t("resumo", { total: itensFtp.length, cod: itensFtp.filter(it => it.codigo).length, prontos: qtd("pronto"), ok: qtd("feito"), conf: qtd("conflito") })
