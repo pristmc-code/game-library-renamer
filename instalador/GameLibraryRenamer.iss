@@ -122,7 +122,7 @@ Type: files;          Name: "{app}\base_titulos.tsv"
 Type: files;          Name: "{app}\base_titulos.tmp"
 Type: files;          Name: "{app}\base_titulos.json"
 Type: filesandordirs; Name: "{app}\icones"
-; Perfil da janela do app (Edge/Chrome em modo aplicativo).
+; Dados da janela do app (WebView2; nas versoes antigas, perfil do Edge/Chrome em modo aplicativo).
 Type: filesandordirs; Name: "{app}\janela"
 
 [Code]

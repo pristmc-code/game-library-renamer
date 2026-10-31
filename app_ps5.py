@@ -1,8 +1,8 @@
-"""Game Library Renamer - interface grafica local (via navegador) para consultar Title IDs de PS4/PS5
+"""Game Library Renamer - interface grafica local (janela propria com WebView2) para consultar Title IDs de PS4/PS5
 e renomear arquivos/pastas no PS5 via FTP/SFTP.
 
 Uso:
-    python app_ps5.py            (abre http://127.0.0.1:8765 no navegador)
+    python app_ps5.py            (abre a janela do app; sem WebView2, abre no navegador padrao)
     python app_ps5.py --porta 9000 --sem-navegador
 
 O servidor escuta somente em 127.0.0.1 (nao fica acessivel na rede).
@@ -17,6 +17,7 @@ import subprocess
 import threading
 import time
 import urllib.parse
+import urllib.request
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -91,7 +92,8 @@ def limpar_cache() -> int:
 _conexao = ftp_ps5.normalizar_conexao
 
 # ---------------------------------------------------------------- vida da tela
-# A pagina avisa a cada 5s que esta aberta (/api/ping) e, ao fechar, manda /api/fechou.
+# Com a janela propria, fechar a janela encerra o app. Na reserva (tela no navegador padrao), a
+# pagina avisa a cada 5s que esta aberta (/api/ping) e, ao fechar, manda /api/fechou.
 # Assim o app nunca fica rodando escondido sem tela (o que prendia os arquivos na atualizacao).
 ESPERA_FECHOU_S = 6          # apos /api/fechou, encerra se nenhuma tela der sinal nesse tempo
 SEM_SINAL_S = 180            # rede de seguranca: nenhum sinal por 3 min (tela minimizada pinga menos)
@@ -224,7 +226,10 @@ class Handler(BaseHTTPRequestHandler):
             elif rota == "/api/sair":
                 self._json({"ok": True})
                 # Encerra depois de responder (shutdown precisa rodar fora da thread do pedido).
-                threading.Thread(target=self.server.shutdown, daemon=True).start()
+                threading.Thread(target=_encerrar, args=(self.server,), daemon=True).start()
+            elif rota == "/api/mostrar":
+                janela.trazer_para_frente()  # outra copia do app foi aberta: mostra esta janela
+                self._json({"ok": True})
             elif rota == "/api/abrir-link":
                 webbrowser.open(link_externo(dados))  # navegador padrao do usuario, fora da janela do app
                 foco.trazer_navegador_para_frente()   # sem isso, com o navegador minimizado ele so pisca
@@ -292,6 +297,21 @@ class ServidorExclusivo(ThreadingHTTPServer):
         super().server_bind()
 
 
+def _encerrar(servidor) -> None:
+    janela.fechar()  # fecha a janela junto (o main encerra quando ela fecha)
+    servidor.shutdown()
+
+
+def _mostrar_copia_aberta(endereco: str) -> None:
+    """Pede para a copia que ja esta rodando mostrar a janela dela; sem resposta, abre no navegador."""
+    pedido = urllib.request.Request(endereco + "/api/mostrar", data=b"{}", method="POST",
+                                    headers={"Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(pedido, timeout=3).read()
+    except OSError:
+        janela.abrir_navegador(endereco)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Interface local de consulta de Title IDs PS4/PS5")
     parser.add_argument("--porta", type=int, default=8765)
@@ -303,9 +323,9 @@ def main() -> None:
         servidor = ServidorExclusivo(("127.0.0.1", args.porta), Handler)
     except OSError:
         # Porta ocupada: o app ja esta aberto. Nao abre uma segunda copia, so mostra a janela.
-        print(f"O Game Library Renamer ja esta aberto em {endereco} - abrindo a janela dele.")
+        print(f"O Game Library Renamer ja esta aberto em {endereco} - mostrando a janela dele.")
         if not args.sem_navegador:
-            janela.abrir(endereco)
+            _mostrar_copia_aberta(endereco)
         return
 
     try:
@@ -315,21 +335,22 @@ def main() -> None:
     base_titulos.atualizar_em_segundo_plano()  # carrega/baixa a base local de titulos
     print(f"Game Library Renamer {ftp_ps5.VERSAO} rodando em {endereco}  (feche a janela, Ctrl+C ou botao Sair para encerrar)")
     print(f"Configuracao: {ftp_ps5.ARQUIVO_INI}")
-    processo_janela = None
-    if not args.sem_navegador:
-        # Janela propria (sem barra de endereco); fechar a janela encerra o app.
-        processo_janela = janela.abrir(endereco)
-        if processo_janela:
-            threading.Thread(target=janela.ao_fechar, args=(processo_janela, servidor.shutdown), daemon=True).start()
-        # Encerra tambem quando a tela some por outro caminho (janela repassada ao Edge, aba fechada...).
-        threading.Thread(target=_vigiar_tela, args=(servidor,), daemon=True).start()
+    rodando = threading.Thread(target=servidor.serve_forever, daemon=True)
+    rodando.start()
     try:
-        servidor.serve_forever()
+        # Janela propria (pywebview): so volta quando a janela fecha (ou pelo botao Sair).
+        if args.sem_navegador or not janela.mostrar(endereco):
+            if not args.sem_navegador:
+                # Reserva: navegador padrao; encerra quando a tela some (aba fechada, sem sinal...).
+                janela.abrir_navegador(endereco)
+                threading.Thread(target=_vigiar_tela, args=(servidor,), daemon=True).start()
+            while rodando.is_alive():
+                rodando.join(0.5)
     except KeyboardInterrupt:
         print("\nEncerrado.")
     finally:
+        servidor.shutdown()
         servidor.server_close()
-        janela.fechar(processo_janela)  # botao Sair: fecha a janela junto
 
 
 if __name__ == "__main__":

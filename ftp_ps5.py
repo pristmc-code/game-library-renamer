@@ -279,6 +279,17 @@ def conectar(conexao: dict):
 
 # ----------------------------------------------------------------------------- operacoes
 
+# Arquivos compactados nao sao jogos instalaveis: ficam fora da lista (nem aparecem nem sao renomeados).
+EXTENSOES_COMPACTADAS = (".zip", ".rar", ".7z", ".tar", ".gz", ".tgz", ".bz2", ".xz", ".lz", ".lzma",
+                         ".zst", ".cab", ".arj", ".lzh", ".z")
+RE_PARTE_COMPACTADA = re.compile(r"\.(r\d{2}|z\d{2}|\d{3})$", re.IGNORECASE)  # volumes: .r00, .z01, .001
+
+
+def compactado(item: dict) -> bool:
+    nome = item["nome"].lower()
+    return item["tipo"] == "arquivo" and (nome.endswith(EXTENSOES_COMPACTADAS) or bool(RE_PARTE_COMPACTADA.search(nome)))
+
+
 def extrair_codigo(nome: str) -> str:
     achado = RE_CODIGO_NOME.search(nome)
     return (achado.group(1) + achado.group(2)).upper() if achado else ""
@@ -297,6 +308,8 @@ def escanear(conexao: dict, pastas: list[str]) -> dict:
                 if not estado["existe"]:
                     continue
                 for item in cliente.listar(pasta):
+                    if compactado(item):
+                        continue
                     item.update(pasta=pasta, codigo=extrair_codigo(item["nome"]))
                     itens.append(item)
                     estado["qtd"] += 1

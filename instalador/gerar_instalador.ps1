@@ -1,6 +1,6 @@
 # ============================================================
 #  Gera o instalador do Game Library Renamer
-#  Requisitos: Python com pyinstaller, paramiko e pillow; Inno Setup 6.
+#  Requisitos: Python com pyinstaller, paramiko, pywebview e pillow; Inno Setup 6.
 #  Uso (na pasta instalador):  powershell -ExecutionPolicy Bypass -File gerar_instalador.ps1
 #  Saida: instalador\saida\GameLibraryRenamer_<versao>_Setup.exe (versao = VERSAO do ftp_ps5.py)
 # ============================================================

@@ -154,6 +154,7 @@
       <div class="linha" style="margin-top:0;margin-bottom:8px">
         <label class="dica"><input type="checkbox" id="chkSemCodigo"> <span data-i18n="chk_sem_codigo"></span></label>
         <span class="progresso" id="resumoFtp"></span>
+        <button class="renomear" id="btnRenomearTodos" style="margin-left:auto" disabled></button>
       </div>
       <div class="rolagem">
         <table>
@@ -224,7 +225,9 @@ const TEXTOS = {
     st_pronto: "pronto para renomear", st_renomeando: "renomeando…", st_falhou: "falhou: {erro}",
     st_nao_encontrado: "não encontrado", st_codigo_invalido: "código inválido", st_erro_http: "erro HTTP {n}",
     st_erro_conexao: "erro de conexão: {d}", st_servidor: "servidor local não respondeu", st_ok: "ok",
-    btn_renomear: "Renomear", btn_copiar: "Copiar",
+    btn_renomear: "Renomear", btn_copiar: "Copiar", btn_renomear_todos: "Renomear todos ({n})",
+    conf_renomear_todos: "Renomear {n} itens prontos no PS5?", prog_renomeando: "Renomeando {a} de {b}…",
+    prog_renomeados: "{ok} de {n} renomeados.",
     btn_loja: "Loja", tt_loja: "Fotos e vídeos oficiais na PlayStation Store", btn_youtube: "YouTube", tt_youtube: "Vídeos de gameplay no YouTube",
     dica_payload_req: "Para conectar, o payload de FTP precisa estar ativo no PS5. Se ainda não tiver, baixe o ftpsrv em",
     prog_conectando: "Conectando e lendo as pastas…", prog_jogos: "Consultando jogos {a} de {b}…",
@@ -269,7 +272,9 @@ const TEXTOS = {
     st_pronto: "ready to rename", st_renomeando: "renaming…", st_falhou: "failed: {erro}",
     st_nao_encontrado: "not found", st_codigo_invalido: "invalid code", st_erro_http: "HTTP error {n}",
     st_erro_conexao: "connection error: {d}", st_servidor: "local server did not respond", st_ok: "ok",
-    btn_renomear: "Rename", btn_copiar: "Copy",
+    btn_renomear: "Rename", btn_copiar: "Copy", btn_renomear_todos: "Rename all ({n})",
+    conf_renomear_todos: "Rename {n} ready items on the PS5?", prog_renomeando: "Renaming {a} of {b}…",
+    prog_renomeados: "{ok} of {n} renamed.",
     btn_loja: "Store", tt_loja: "Official screenshots and videos on the PlayStation Store", btn_youtube: "YouTube", tt_youtube: "Gameplay videos on YouTube",
     dica_payload_req: "To connect, the FTP payload must be running on the PS5. If you do not have it yet, download ftpsrv at",
     prog_conectando: "Connecting and reading folders…", prog_jogos: "Looking up games {a} of {b}…",
@@ -314,7 +319,9 @@ const TEXTOS = {
     st_pronto: "listo para renombrar", st_renomeando: "renombrando…", st_falhou: "falló: {erro}",
     st_nao_encontrado: "no encontrado", st_codigo_invalido: "código inválido", st_erro_http: "error HTTP {n}",
     st_erro_conexao: "error de conexión: {d}", st_servidor: "el servidor local no respondió", st_ok: "ok",
-    btn_renomear: "Renombrar", btn_copiar: "Copiar",
+    btn_renomear: "Renombrar", btn_copiar: "Copiar", btn_renomear_todos: "Renombrar todos ({n})",
+    conf_renomear_todos: "¿Renombrar {n} elementos listos en la PS5?", prog_renomeando: "Renombrando {a} de {b}…",
+    prog_renomeados: "{ok} de {n} renombrados.",
     btn_loja: "Tienda", tt_loja: "Capturas y videos oficiales en PlayStation Store", btn_youtube: "YouTube", tt_youtube: "Videos de gameplay en YouTube",
     dica_payload_req: "Para conectar, el payload de FTP debe estar activo en la PS5. Si aún no lo tiene, descargue ftpsrv en",
     prog_conectando: "Conectando y leyendo las carpetas…", prog_jogos: "Consultando juegos {a} de {b}…",
@@ -511,6 +518,7 @@ $("btnSair").onclick = async () => {
 };
 
 /* ======================= Aba FTP ======================= */
+let renomeandoTodos = false;  // botão "Renomear todos" em andamento
 let itensFtp = [];          // {pasta, nome, tipo, codigo, info, novo, estado, msg: [chave, params]}
 let infoPorCodigo = {};
 const PORTA_PADRAO = { ftp: "2121", sftp: "22" };
@@ -627,6 +635,8 @@ function renderizarFtp() {
   const visiveis = itensFtp.map((it, i) => [it, i]).filter(([it]) => mostrarSem || it.codigo)
     .sort(([a, ia], [b, ib]) => okAoConectar(a) - okAoConectar(b) || ia - ib);
   const qtd = s => itensFtp.filter(it => it.estado === s).length;
+  $("btnRenomearTodos").textContent = t("btn_renomear_todos", { n: qtd("pronto") });
+  $("btnRenomearTodos").disabled = renomeandoTodos || !qtd("pronto");
   $("resumoFtp").textContent = itensFtp.length
     ? t("resumo", { total: itensFtp.length, cod: itensFtp.filter(it => it.codigo).length, prontos: qtd("pronto"), ok: qtd("feito"), conf: qtd("conflito") })
     : "";
@@ -693,21 +703,43 @@ async function conectarFtp() {
   }
 }
 
-async function renomearItem(i) {
+async function renomearItem(i, emLote = false) {
   const it = itensFtp[i];
   it.estado = "renomeando"; it.msg = ["st_renomeando"]; renderizarFtp();
   try {
     const r = await postJson("/api/renomear", { ...conexao(), pasta: it.pasta, de: it.nome, para: it.novo });
     it.estado = "";
-    if (r.ok) { it.nome = it.novo; it.renomeado = true; it.erroRenomear = ""; avisar(t("av_renomeado")); }
+    if (r.ok) { it.nome = it.novo; it.renomeado = true; it.erroRenomear = ""; if (!emLote) avisar(t("av_renomeado")); }
     else { it.erroRenomear = tErro(r); }
   } catch {
     it.estado = ""; it.erroRenomear = t("st_servidor");
   }
   recalcular();
+  return it.renomeado && !it.erroRenomear;
+}
+
+// Renomeia, um de cada vez, todos os itens "pronto para renomear" (a lista fica na mesma ordem).
+async function renomearTodos() {
+  const fila = itensFtp.map((it, i) => [it, i]).filter(([it]) => it.estado === "pronto").map(([, i]) => i);
+  if (!fila.length || !confirm(t("conf_renomear_todos", { n: fila.length }))) return;
+  renomeandoTodos = true;
+  $("btnConectar").disabled = true;
+  let ok = 0;
+  try {
+    for (const [n, i] of fila.entries()) {
+      $("progFtp").textContent = t("prog_renomeando", { a: n + 1, b: fila.length });
+      if (itensFtp[i]?.estado === "pronto" && await renomearItem(i, true)) ok++;
+    }
+  } finally {
+    renomeandoTodos = false;
+    $("btnConectar").disabled = false;
+    $("progFtp").textContent = t("prog_renomeados", { ok, n: fila.length });
+    renderizarFtp();
+  }
 }
 
 $("btnConectar").onclick = conectarFtp;
+$("btnRenomearTodos").onclick = renomearTodos;
 $("btnSalvar").onclick = async () => {
   const r = await postJson("/api/config", conexao());
   avisar(r.ok ? t("av_salvo") : t("av_erro_salvar", { e: tErro(r) }), 3000);

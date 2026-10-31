@@ -19,7 +19,7 @@ Get-Process GameLibraryRenamer -ErrorAction SilentlyContinue |
     Where-Object { $_.Path -and $_.Path.StartsWith($Pasta, [StringComparison]::OrdinalIgnoreCase) } |
     Stop-Process -Force -ErrorAction SilentlyContinue
 
-# 3) Fecha a janela do app (Edge/Chrome com o perfil 'janela' desta pasta) - nunca o navegador do usuario.
+# 3) Versoes antigas: fecha a janela do app (Edge/Chrome com o perfil 'janela' desta pasta) - nunca o navegador do usuario.
 $perfil = "$Pasta\janela"
 Get-CimInstance Win32_Process -Filter "Name='msedge.exe' or Name='chrome.exe'" -ErrorAction SilentlyContinue |
     Where-Object { $_.CommandLine -and $_.CommandLine.IndexOf($perfil, [StringComparison]::OrdinalIgnoreCase) -ge 0 } |

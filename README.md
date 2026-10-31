@@ -28,7 +28,8 @@ CUSA07408 God of War.pkg   →  God_of_War_[CUSA07408][US][PS4].pkg
 - **Manual lookup** tab: paste codes or file names, copy the new names, or export TXT/CSV.
 - **Store** and **YouTube** buttons for each game.
 - English, Português (BR) and Español.
-- Runs in its own window (no browser tabs) and closes completely when the window is closed.
+- Runs in its own window (WebView2, no browser is opened) and closes completely when the window is closed.
+- Compressed files (`.zip`, `.rar`, `.7z`...) in the folders are ignored.
 
 ## Install
 
@@ -45,7 +46,7 @@ When uninstalling you can choose whether to also delete your settings and cached
    no password**. The etaHEN FTP uses port **1337**.
 2. In the app, enter the PS5 IP address, click **Save** and **Connect**.
 3. Add or remove folders right in the app (defaults: `/data/homebrew/` and `/mnt/ext1/homebrew/`).
-4. Click **Rename** on each game you want to rename.
+4. Click **Rename** on each game you want to rename, or **Rename all** to rename every ready item.
 
 ## Settings file
 
@@ -74,7 +75,7 @@ folder2 = /mnt/ext1/homebrew/
 Requires Windows and Python 3.12+.
 
 ```bat
-pip install paramiko
+pip install paramiko pywebview
 python app_ps5.py
 ```
 
@@ -82,7 +83,7 @@ Command-line lookup without the UI: `python consulta_ps5.py PPSA08329 CUSA07408`
 
 ### Build the installer
 
-Requires `pip install pyinstaller pillow paramiko` and [Inno Setup 6](https://jrsoftware.org/isinfo.php).
+Requires `pip install pyinstaller pillow paramiko pywebview` and [Inno Setup 6](https://jrsoftware.org/isinfo.php).
 Set `VERSAO` in `ftp_ps5.py`, then run:
 
 ```powershell
