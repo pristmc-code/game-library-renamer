@@ -47,6 +47,7 @@ When uninstalling you can choose whether to also delete your settings and cached
 2. In the app, enter the PS5 IP address, click **Save** and **Connect**.
 3. Add or remove folders right in the app (defaults: `/data/homebrew/` and `/mnt/ext1/homebrew/`).
 4. Click **Rename** on each game you want to rename, or **Rename all** to rename every ready item.
+   Use the **Found / Not found / All** buttons to filter the list (not found = no code in the name or code not found).
 
 ## Settings file
 

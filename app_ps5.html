@@ -81,6 +81,10 @@
   .local { color: var(--muted); font-size: 12px; }
   td.st { width: 1%; white-space: nowrap; text-align: right; }
   td.st button { margin-top: 4px; padding: 3px 10px; font-size: 13px; }
+  .filtros { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .filtros button { border: none; border-radius: 0; padding: 4px 12px; font-size: 13px; }
+  .filtros button + button { border-left: 1px solid var(--border); }
+  .filtros button.ativo { background: var(--accent); color: var(--accent-text); font-weight: 600; }
   .renomear { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
   .ok { color: var(--ok); } .erro { color: var(--err); } .aviso-st { color: var(--warn); } .nomeok { font-weight: 700; }
   .vazio { color: var(--muted); text-align: center; padding: 20px; }
@@ -152,7 +156,9 @@
 
     <section class="card lista">
       <div class="linha" style="margin-top:0;margin-bottom:8px">
-        <label class="dica"><input type="checkbox" id="chkSemCodigo"> <span data-i18n="chk_sem_codigo"></span></label>
+        <div class="filtros" id="filtrosFtp">
+          <button data-filtro="encontrados"></button><button data-filtro="nao"></button><button data-filtro="todos"></button>
+        </div>
         <span class="progresso" id="resumoFtp"></span>
         <button class="renomear" id="btnRenomearTodos" style="margin-left:auto" disabled></button>
       </div>
@@ -215,9 +221,10 @@ const TEXTOS = {
     e_ini_invalido: "o arquivo de configuração tem um erro — corrija em Editar INI e clique em Recarregar INI ({detalhe})",
     pasta_nao_testada: "não testada — clique em Conectar", pasta_existe: "✅ existe ({n} {itens})", item: "item", itens: "itens",
     pasta_nao_existe: "❌ não existe", sem_pastas_ini: "nenhuma pasta configurada no INI",
-    chk_sem_codigo: "mostrar itens sem código no nome",
+    filtro_encontrados: "Encontrados ({n})", filtro_nao: "Não encontrados ({n})", filtro_todos: "Todos ({n})",
+    tt_filtro_nao: "Itens sem código no nome e códigos não encontrados",
     th_jogo: "Jogo", th_arquivo: "Arquivo: atual → novo", th_status: "Status", th_nome_arquivo: "Nome para arquivo",
-    vazio_ftp: "Clique em Conectar para ler as pastas do PS5.", vazio_sem_codigo: "Nenhum item com código de jogo no nome.",
+    vazio_ftp: "Clique em Conectar para ler as pastas do PS5.", vazio_sem_codigo: "Nenhum item neste filtro.",
     vazio_manual: "Nenhuma consulta ainda. (Ctrl+Enter também consulta.)",
     resumo: "{total} itens · {cod} com código · {prontos} prontos · {ok} NOME OK · {conf} conflitos",
     st_sem_codigo: "sem código no nome", st_consultando: "consultando…", st_nome_ok: "NOME OK", st_nome_ok_agora: "NOME OK (renomeado agora)",
@@ -262,9 +269,10 @@ const TEXTOS = {
     e_ini_invalido: "the settings file has an error — fix it with Edit INI and click Reload INI ({detalhe})",
     pasta_nao_testada: "not tested — click Connect", pasta_existe: "✅ exists ({n} {itens})", item: "item", itens: "items",
     pasta_nao_existe: "❌ does not exist", sem_pastas_ini: "no folder configured in the INI",
-    chk_sem_codigo: "show items without a code in the name",
+    filtro_encontrados: "Found ({n})", filtro_nao: "Not found ({n})", filtro_todos: "All ({n})",
+    tt_filtro_nao: "Items without a code in the name and codes not found",
     th_jogo: "Game", th_arquivo: "File: current → new", th_status: "Status", th_nome_arquivo: "File name",
-    vazio_ftp: "Click Connect to read the PS5 folders.", vazio_sem_codigo: "No item with a game code in its name.",
+    vazio_ftp: "Click Connect to read the PS5 folders.", vazio_sem_codigo: "No items in this filter.",
     vazio_manual: "No lookups yet. (Ctrl+Enter also searches.)",
     resumo: "{total} items · {cod} with code · {prontos} ready · {ok} NAME OK · {conf} conflicts",
     st_sem_codigo: "no code in the name", st_consultando: "looking up…", st_nome_ok: "NAME OK", st_nome_ok_agora: "NAME OK (just renamed)",
@@ -309,9 +317,10 @@ const TEXTOS = {
     e_ini_invalido: "el archivo de configuración tiene un error — corríjalo con Editar INI y haga clic en Recargar INI ({detalhe})",
     pasta_nao_testada: "no probada — haga clic en Conectar", pasta_existe: "✅ existe ({n} {itens})", item: "elemento", itens: "elementos",
     pasta_nao_existe: "❌ no existe", sem_pastas_ini: "ninguna carpeta configurada en el INI",
-    chk_sem_codigo: "mostrar elementos sin código en el nombre",
+    filtro_encontrados: "Encontrados ({n})", filtro_nao: "No encontrados ({n})", filtro_todos: "Todos ({n})",
+    tt_filtro_nao: "Elementos sin código en el nombre y códigos no encontrados",
     th_jogo: "Juego", th_arquivo: "Archivo: actual → nuevo", th_status: "Estado", th_nome_arquivo: "Nombre de archivo",
-    vazio_ftp: "Haga clic en Conectar para leer las carpetas de la PS5.", vazio_sem_codigo: "Ningún elemento con código de juego en el nombre.",
+    vazio_ftp: "Haga clic en Conectar para leer las carpetas de la PS5.", vazio_sem_codigo: "Ningún elemento en este filtro.",
     vazio_manual: "Ninguna consulta todavía. (Ctrl+Enter también consulta.)",
     resumo: "{total} elementos · {cod} con código · {prontos} listos · {ok} NOMBRE OK · {conf} conflictos",
     st_sem_codigo: "sin código en el nombre", st_consultando: "consultando…", st_nome_ok: "NOMBRE OK", st_nome_ok_agora: "NOMBRE OK (renombrado ahora)",
@@ -519,6 +528,8 @@ $("btnSair").onclick = async () => {
 
 /* ======================= Aba FTP ======================= */
 let renomeandoTodos = false;  // botão "Renomear todos" em andamento
+let filtroFtp = "encontrados";
+try { filtroFtp = localStorage.getItem("filtroFtp") || filtroFtp; } catch { /* sem armazenamento: usa o padrão */ }
 let itensFtp = [];          // {pasta, nome, tipo, codigo, info, novo, estado, msg: [chave, params]}
 let infoPorCodigo = {};
 const PORTA_PADRAO = { ftp: "2121", sftp: "22" };
@@ -627,12 +638,22 @@ function recalcular() {
 
 const textoMsg = msg => !msg ? "" : msg[0] === "#status" ? tStatus(msg[1]) : t(msg[0], msg[1]);
 
+const categoriaFtp = it => !it.codigo || (it.info && !["ok", "pendente"].includes(it.info.status)) ? "nao" : "encontrados";
+
 function renderizarFtp() {
-  const mostrarSem = $("chkSemCodigo").checked;
+  // Filtro: encontrados (jogo achado, ou ainda consultando) / não encontrados (sem código no nome
+  // ou código não encontrado) / todos. Os botões mostram quantos itens há em cada um.
+  const contagem = { encontrados: 0, nao: 0, todos: itensFtp.length };
+  for (const it of itensFtp) contagem[categoriaFtp(it)]++;
+  for (const b of $("filtrosFtp").children) {
+    b.textContent = t("filtro_" + b.dataset.filtro, { n: contagem[b.dataset.filtro] });
+    b.title = b.dataset.filtro === "nao" ? t("tt_filtro_nao") : "";
+    b.classList.toggle("ativo", b.dataset.filtro === filtroFtp);
+  }
   // Itens que já estavam com NOME OK ao CONECTAR vão para o final da lista; os demais mantêm a
   // ordem das pastas. Quem foi renomeado agora fica onde está, para dar para ver o novo nome.
   const okAoConectar = it => it.estado === "feito" && !it.renomeado;
-  const visiveis = itensFtp.map((it, i) => [it, i]).filter(([it]) => mostrarSem || it.codigo)
+  const visiveis = itensFtp.map((it, i) => [it, i]).filter(([it]) => filtroFtp === "todos" || categoriaFtp(it) === filtroFtp)
     .sort(([a, ia], [b, ib]) => okAoConectar(a) - okAoConectar(b) || ia - ib);
   const qtd = s => itensFtp.filter(it => it.estado === s).length;
   $("btnRenomearTodos").textContent = t("btn_renomear_todos", { n: qtd("pronto") });
@@ -749,7 +770,13 @@ $("btnEditarIni").onclick = async () => {
   if (!r.ok) avisar(t("av_erro", { e: tErro(r) }), 4000);
 };
 $("btnRecarregar").onclick = () => carregarConfig(true).then(() => avisar(t("av_pastas")));
-$("chkSemCodigo").onchange = renderizarFtp;
+$("filtrosFtp").addEventListener("click", e => {
+  const b = e.target.closest("button[data-filtro]");
+  if (!b) return;
+  filtroFtp = b.dataset.filtro;
+  try { localStorage.setItem("filtroFtp", filtroFtp); } catch { /* só não lembra a escolha */ }
+  renderizarFtp();
+});
 $("btnAddPasta").onclick = adicionarPasta;
 $("novaPasta").addEventListener("keydown", e => { if (e.key === "Enter") adicionarPasta(); });
 $("listaPastas").addEventListener("click", e => {
