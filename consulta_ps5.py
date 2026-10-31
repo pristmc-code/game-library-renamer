@@ -10,7 +10,7 @@ Uso:
     python consulta_ps5.py -a codigos.txt -o resultado.csv
     python consulta_ps5.py -a codigos.txt -l nomes.txt   (so as linhas para renomear)
 
-Retorna: Title ID, plataforma, nome do jogo, nome para arquivo ('Nome_do_Jogo_[PPSA08329][US][PS5]'),
+Retorna: Title ID, plataforma, nome do jogo, nome para arquivo ('Nome_do_Jogo-PPSA08329-US-PS5'),
 Content ID, publisher, Publisher ID, regiao e URL.
 Usa somente a biblioteca padrao do Python (sem pip install).
 """
@@ -36,8 +36,9 @@ LETRAS_ESPECIAIS = str.maketrans({"ß": "ss", "æ": "ae", "Æ": "AE", "ø": "o",
 
 
 def nome_para_arquivo(nome: str, codigo: str, regiao: str = "", plataforma: str = "") -> str:
-    """Monta 'Nome_do_Jogo_[PPSA08329][US][PS5]' so com letras sem acento, numeros, hifen e _ no lugar dos espacos.
-    Sem regiao/plataforma informada, o sufixo correspondente ([US], [PS5]...) e omitido.
+    """Monta 'Nome_do_Jogo-PPSA08329-US-PS5' so com letras sem acento, numeros, hifen e _ no lugar dos espacos.
+    Codigo, regiao e plataforma vao separados por hifen (sem colchetes: o nome fica mais curto, o que
+    importa para o limite do ShadowMountPlus). Sem regiao/plataforma informada, a parte (-US, -PS5...) e omitida.
 
     Ex.: "Assassin's Creed® Valhalla" -> "Assassins_Creed_Valhalla",
          "God of War Ragnarök" -> "God_of_War_Ragnarok", "Ratchet & Clank" -> "Ratchet_and_Clank".
@@ -55,8 +56,8 @@ def nome_para_arquivo(nome: str, codigo: str, regiao: str = "", plataforma: str 
     for extra in (regiao, plataforma):
         extra = re.sub(r"[^A-Za-z0-9]", "", extra).upper()
         if extra:
-            sufixo += f"[{extra}]"
-    return f"{nome} [{codigo}]{sufixo}".replace(" ", "_")
+            sufixo += f"-{extra}"
+    return nome.replace(" ", "_") + f"-{codigo}{sufixo}"
 
 
 def normalizar(codigo: str) -> str:

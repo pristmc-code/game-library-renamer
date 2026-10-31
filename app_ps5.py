@@ -26,7 +26,7 @@ import foco
 import ftp_ps5
 import icones
 import janela
-from consulta_ps5 import CAMPOS, SITES, consultar, normalizar
+from consulta_ps5 import CAMPOS, SITES, consultar, nome_para_arquivo, normalizar
 
 PAGINA = ftp_ps5.PASTA_RECURSOS / "app_ps5.html"
 ARQUIVO_CACHE = ftp_ps5.PASTA_APP / "cache_consultas.json"
@@ -65,7 +65,10 @@ def consultar_com_cache(codigo: str) -> dict:
             guardado = _cache_consultas.get(chave)
             if guardado and (guardado["status"] == "ok"
                              or time.time() - guardado.get("_quando", 0) < VALIDADE_NAO_ENCONTRADO):
-                return {**guardado, "cache": True}
+                # nome_arquivo refeito na hora: o cache pode ter sido gravado com o formato antigo de nome.
+                novo_nome = nome_para_arquivo(guardado["nome"], guardado["title_id"], guardado.get("regiao", ""),
+                                              guardado.get("plataforma", "")) if guardado["status"] == "ok" else ""
+                return {**guardado, "nome_arquivo": novo_nome or guardado.get("nome_arquivo", ""), "cache": True}
         resultado = consultar(codigo)
         if resultado["status"] in ("ok", "nao encontrado"):
             with _trava_cache:

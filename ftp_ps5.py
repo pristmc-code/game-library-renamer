@@ -285,6 +285,14 @@ EXTENSOES_COMPACTADAS = (".zip", ".rar", ".7z", ".tar", ".gz", ".tgz", ".bz2", "
 RE_PARTE_COMPACTADA = re.compile(r"\.(r\d{2}|z\d{2}|\d{3})$", re.IGNORECASE)  # volumes: .r00, .z01, .001
 
 
+# Patches e backports levam o Title ID do jogo no nome: se fossem renomeados, ficariam com o nome do jogo.
+RE_PATCH = re.compile(r"patch|pacth|backport|back[-_ .]port|update", re.IGNORECASE)
+
+
+def eh_patch(nome: str) -> bool:
+    return bool(RE_PATCH.search(nome))
+
+
 def compactado(item: dict) -> bool:
     nome = item["nome"].lower()
     return item["tipo"] == "arquivo" and (nome.endswith(EXTENSOES_COMPACTADAS) or bool(RE_PARTE_COMPACTADA.search(nome)))
@@ -308,9 +316,10 @@ def escanear(conexao: dict, pastas: list[str]) -> dict:
                 if not estado["existe"]:
                     continue
                 for item in cliente.listar(pasta):
-                    if compactado(item):
+                    # So arquivos: pastas e compactados ficam fora da lista.
+                    if item["tipo"] != "arquivo" or compactado(item):
                         continue
-                    item.update(pasta=pasta, codigo=extrair_codigo(item["nome"]))
+                    item.update(pasta=pasta, codigo=extrair_codigo(item["nome"]), patch=eh_patch(item["nome"]))
                     itens.append(item)
                     estado["qtd"] += 1
             except ERROS_CONEXAO as erro:

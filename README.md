@@ -4,8 +4,8 @@ Rename the game files and folders on your PS5 (or any FTP/SFTP server) to clean,
 automatically, from the PS4/PS5 Title ID found in each name.
 
 ```
-PPSA08329-app.pkg          →  God_of_War_Ragnarok_[PPSA08329][US][PS5].pkg
-CUSA07408 God of War.pkg   →  God_of_War_[CUSA07408][US][PS4].pkg
+PPSA08329-app.pkg          →  God_of_War_Ragnarok-PPSA08329-US-PS5.pkg
+CUSA07408 God of War.pkg   →  God_of_War-CUSA07408-US-PS4.pkg
 ```
 
 ![Game Library Renamer](docs/screenshot.png)
@@ -16,7 +16,7 @@ CUSA07408 God of War.pkg   →  God_of_War_[CUSA07408][US][PS4].pkg
   (subfolders are never opened). Each folder shows whether it exists.
 - **Finds the Title ID** (`PPSA`, `CUSA`, …) in every file/folder name and shows the game name, cover,
   platform, region, publisher and Content ID.
-- **Proposes the new name** `Game_Name_[TITLEID][REGION][PS4|PS5]` (no accents or special characters,
+- **Proposes the new name** `Game_Name-TITLEID-REGION-PS4|PS5` (no accents or special characters,
   spaces become `_`, the file extension is kept) with a **Rename** button per game.
 - **Safe renaming**: never overwrites an existing item, detects two items that would get the same name,
   and moves the already correct ones ("NAME OK") to the end of the list.
@@ -29,7 +29,9 @@ CUSA07408 God of War.pkg   →  God_of_War_[CUSA07408][US][PS4].pkg
 - **Store** and **YouTube** buttons for each game.
 - English, Português (BR) and Español.
 - Runs in its own window (WebView2, no browser is opened) and closes completely when the window is closed.
-- Compressed files (`.zip`, `.rar`, `.7z`...) in the folders are ignored.
+- Only files are renamed: folders and compressed files (`.zip`, `.rar`, `.7z`...) are ignored.
+- Patches and backports (file name with `patch`, `backport` or `update`) are listed but never renamed,
+  so they do not get the game's name.
 
 ## Install
 
@@ -48,6 +50,16 @@ When uninstalling you can choose whether to also delete your settings and cached
 3. Add or remove folders right in the app (defaults: `/data/homebrew/` and `/mnt/ext1/homebrew/`).
 4. Click **Rename** on each game you want to rename, or **Rename all** to rename every ready item.
    Use the **Found / Not found / All** buttons to filter the list (not found = no code in the name or code not found).
+5. Each item shows its full path length (folder + name), now and after renaming.
+
+### ShadowMountPlus and long names
+
+ShadowMountPlus mounts each image at `/mnt/shadowmnt/<name without extension>_<8-char hash>`
+(`/mnt/shadowmnt/pfsc/` for `.ffpfsc`), and the PS5 kernel refuses mount points longer than 87
+characters ("File name too long"). So the image name without the extension must be at most 63
+characters (58 for `.ffpfsc`). For `.ffpkg`, `.exfat`, `.ffpfs` and `.ffpfsc` images the app keeps the
+name at 58 characters or less, shortening only the title and keeping `-TITLEID-REGION-PS5`, and
+flags images that are already too long. Folders and `.pkg` files are not affected.
 
 ## Settings file
 

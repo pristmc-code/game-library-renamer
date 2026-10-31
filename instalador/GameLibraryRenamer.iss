@@ -7,7 +7,7 @@
 
 #define AppNome    "Game Library Renamer"
 #ifndef AppVersao
-  #define AppVersao  "1.2"
+  #define AppVersao  "1.0"
 #endif
 #define AppExe     "GameLibraryRenamer.exe"
 ; Nome de atalho/pasta do menu: sem "/" (o Windows trataria como subpasta)

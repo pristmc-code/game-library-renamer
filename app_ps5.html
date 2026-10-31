@@ -85,6 +85,8 @@
   .filtros button { border: none; border-radius: 0; padding: 4px 12px; font-size: 13px; }
   .filtros button + button { border-left: 1px solid var(--border); }
   .filtros button.ativo { background: var(--accent); color: var(--accent-text); font-weight: 600; }
+  .tam { color: var(--muted); font-size: 12px; }
+  .tam-longo { color: var(--err); font-weight: 600; }
   .renomear { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
   .ok { color: var(--ok); } .erro { color: var(--err); } .aviso-st { color: var(--warn); } .nomeok { font-weight: 700; }
   .vazio { color: var(--muted); text-align: center; padding: 20px; }
@@ -204,7 +206,7 @@
 const TEXTOS = {
   "pt-BR": {
     titulo: "Game Library Renamer",
-    sub: "Nomes da base local (andshrew/PlayStation-Titles, atualizada ao abrir o app); ícones e o que faltar vêm do prosperopatches.com (PS5), orbispatches.com (PS4) e PS Store. Formato do nome: <code>Nome_do_Jogo_[PPSAXXXXX][US][PS5]</code>.",
+    sub: "Nomes da base local (andshrew/PlayStation-Titles, atualizada ao abrir o app); ícones e o que faltar vêm do prosperopatches.com (PS5), orbispatches.com (PS4) e PS Store. Formato do nome: <code>Nome_do_Jogo-PPSAXXXXX-US-PS5</code>.",
     btn_sair: "Sair", encerrado: "O Game Library Renamer foi encerrado. Pode fechar esta aba.",
     aba_ftp: "Renomear no PS5", aba_manual: "Consulta manual",
     base_ok: "Base local: {qtd} títulos", base_baixada: " (baixada {data})", base_carregando: "Base local: carregando…",
@@ -222,13 +224,16 @@ const TEXTOS = {
     pasta_nao_testada: "não testada — clique em Conectar", pasta_existe: "✅ existe ({n} {itens})", item: "item", itens: "itens",
     pasta_nao_existe: "❌ não existe", sem_pastas_ini: "nenhuma pasta configurada no INI",
     filtro_encontrados: "Encontrados ({n})", filtro_nao: "Não encontrados ({n})", filtro_todos: "Todos ({n})",
-    tt_filtro_nao: "Itens sem código no nome e códigos não encontrados",
+    tt_filtro_nao: "Itens sem código no nome, códigos não encontrados e patches/backports",
     th_jogo: "Jogo", th_arquivo: "Arquivo: atual → novo", th_status: "Status", th_nome_arquivo: "Nome para arquivo",
     vazio_ftp: "Clique em Conectar para ler as pastas do PS5.", vazio_sem_codigo: "Nenhum item neste filtro.",
     vazio_manual: "Nenhuma consulta ainda. (Ctrl+Enter também consulta.)",
     resumo: "{total} itens · {cod} com código · {prontos} prontos · {ok} NOME OK · {conf} conflitos",
-    st_sem_codigo: "sem código no nome", st_consultando: "consultando…", st_nome_ok: "NOME OK", st_nome_ok_agora: "NOME OK (renomeado agora)",
+    st_patch: "patch/backport: não é renomeado", st_sem_codigo: "sem código no nome", st_consultando: "consultando…", st_nome_ok: "NOME OK", st_nome_ok_agora: "NOME OK (renomeado agora)",
     st_conflito_existe: "já existe item com esse nome", st_conflito_duplo: "outro item vai ficar com o mesmo nome",
+    tam_caminho: "caminho + nome: {n} caracteres", tam_novo: "depois de renomear: {n}",
+    tam_smp_longo: "nome longo demais para o ShadowMountPlus ({n} caracteres sem a extensão; máximo {max})",
+    tag_encurtado: "nome encurtado para caber no ShadowMountPlus",
     st_pronto: "pronto para renomear", st_renomeando: "renomeando…", st_falhou: "falhou: {erro}",
     st_nao_encontrado: "não encontrado", st_codigo_invalido: "código inválido", st_erro_http: "erro HTTP {n}",
     st_erro_conexao: "erro de conexão: {d}", st_servidor: "servidor local não respondeu", st_ok: "ok",
@@ -252,7 +257,7 @@ const TEXTOS = {
   },
   en: {
     titulo: "Game Library Renamer",
-    sub: "Names from the local database (andshrew/PlayStation-Titles, updated when the app opens); icons and anything missing come from prosperopatches.com (PS5), orbispatches.com (PS4) and the PS Store. Name format: <code>Game_Name_[PPSAXXXXX][US][PS5]</code>.",
+    sub: "Names from the local database (andshrew/PlayStation-Titles, updated when the app opens); icons and anything missing come from prosperopatches.com (PS5), orbispatches.com (PS4) and the PS Store. Name format: <code>Game_Name-PPSAXXXXX-US-PS5</code>.",
     btn_sair: "Exit", encerrado: "Game Library Renamer has been closed. You can close this tab.",
     aba_ftp: "Rename on PS5", aba_manual: "Manual lookup",
     base_ok: "Local database: {qtd} titles", base_baixada: " (downloaded {data})", base_carregando: "Local database: loading…",
@@ -270,13 +275,16 @@ const TEXTOS = {
     pasta_nao_testada: "not tested — click Connect", pasta_existe: "✅ exists ({n} {itens})", item: "item", itens: "items",
     pasta_nao_existe: "❌ does not exist", sem_pastas_ini: "no folder configured in the INI",
     filtro_encontrados: "Found ({n})", filtro_nao: "Not found ({n})", filtro_todos: "All ({n})",
-    tt_filtro_nao: "Items without a code in the name and codes not found",
+    tt_filtro_nao: "Items without a code in the name, codes not found and patches/backports",
     th_jogo: "Game", th_arquivo: "File: current → new", th_status: "Status", th_nome_arquivo: "File name",
     vazio_ftp: "Click Connect to read the PS5 folders.", vazio_sem_codigo: "No items in this filter.",
     vazio_manual: "No lookups yet. (Ctrl+Enter also searches.)",
     resumo: "{total} items · {cod} with code · {prontos} ready · {ok} NAME OK · {conf} conflicts",
-    st_sem_codigo: "no code in the name", st_consultando: "looking up…", st_nome_ok: "NAME OK", st_nome_ok_agora: "NAME OK (just renamed)",
+    st_patch: "patch/backport: not renamed", st_sem_codigo: "no code in the name", st_consultando: "looking up…", st_nome_ok: "NAME OK", st_nome_ok_agora: "NAME OK (just renamed)",
     st_conflito_existe: "an item with this name already exists", st_conflito_duplo: "another item would get the same name",
+    tam_caminho: "path + name: {n} characters", tam_novo: "after renaming: {n}",
+    tam_smp_longo: "name too long for ShadowMountPlus ({n} characters without the extension; max {max})",
+    tag_encurtado: "name shortened to fit ShadowMountPlus",
     st_pronto: "ready to rename", st_renomeando: "renaming…", st_falhou: "failed: {erro}",
     st_nao_encontrado: "not found", st_codigo_invalido: "invalid code", st_erro_http: "HTTP error {n}",
     st_erro_conexao: "connection error: {d}", st_servidor: "local server did not respond", st_ok: "ok",
@@ -300,7 +308,7 @@ const TEXTOS = {
   },
   es: {
     titulo: "Game Library Renamer",
-    sub: "Nombres de la base local (andshrew/PlayStation-Titles, actualizada al abrir la app); los iconos y lo que falte vienen de prosperopatches.com (PS5), orbispatches.com (PS4) y PS Store. Formato del nombre: <code>Nombre_del_Juego_[PPSAXXXXX][US][PS5]</code>.",
+    sub: "Nombres de la base local (andshrew/PlayStation-Titles, actualizada al abrir la app); los iconos y lo que falte vienen de prosperopatches.com (PS5), orbispatches.com (PS4) y PS Store. Formato del nombre: <code>Nombre_del_Juego-PPSAXXXXX-US-PS5</code>.",
     btn_sair: "Salir", encerrado: "Game Library Renamer se cerró. Puede cerrar esta pestaña.",
     aba_ftp: "Renombrar en PS5", aba_manual: "Consulta manual",
     base_ok: "Base local: {qtd} títulos", base_baixada: " (descargada {data})", base_carregando: "Base local: cargando…",
@@ -318,13 +326,16 @@ const TEXTOS = {
     pasta_nao_testada: "no probada — haga clic en Conectar", pasta_existe: "✅ existe ({n} {itens})", item: "elemento", itens: "elementos",
     pasta_nao_existe: "❌ no existe", sem_pastas_ini: "ninguna carpeta configurada en el INI",
     filtro_encontrados: "Encontrados ({n})", filtro_nao: "No encontrados ({n})", filtro_todos: "Todos ({n})",
-    tt_filtro_nao: "Elementos sin código en el nombre y códigos no encontrados",
+    tt_filtro_nao: "Elementos sin código en el nombre, códigos no encontrados y parches/backports",
     th_jogo: "Juego", th_arquivo: "Archivo: actual → nuevo", th_status: "Estado", th_nome_arquivo: "Nombre de archivo",
     vazio_ftp: "Haga clic en Conectar para leer las carpetas de la PS5.", vazio_sem_codigo: "Ningún elemento en este filtro.",
     vazio_manual: "Ninguna consulta todavía. (Ctrl+Enter también consulta.)",
     resumo: "{total} elementos · {cod} con código · {prontos} listos · {ok} NOMBRE OK · {conf} conflictos",
-    st_sem_codigo: "sin código en el nombre", st_consultando: "consultando…", st_nome_ok: "NOMBRE OK", st_nome_ok_agora: "NOMBRE OK (renombrado ahora)",
+    st_patch: "parche/backport: no se renombra", st_sem_codigo: "sin código en el nombre", st_consultando: "consultando…", st_nome_ok: "NOMBRE OK", st_nome_ok_agora: "NOMBRE OK (renombrado ahora)",
     st_conflito_existe: "ya existe un elemento con ese nombre", st_conflito_duplo: "otro elemento quedaría con el mismo nombre",
+    tam_caminho: "ruta + nombre: {n} caracteres", tam_novo: "después de renombrar: {n}",
+    tam_smp_longo: "nombre demasiado largo para ShadowMountPlus ({n} caracteres sin la extensión; máximo {max})",
+    tag_encurtado: "nombre acortado para caber en ShadowMountPlus",
     st_pronto: "listo para renombrar", st_renomeando: "renombrando…", st_falhou: "falló: {erro}",
     st_nao_encontrado: "no encontrado", st_codigo_invalido: "código inválido", st_erro_http: "error HTTP {n}",
     st_erro_conexao: "error de conexión: {d}", st_servidor: "el servidor local no respondió", st_ok: "ok",
@@ -607,8 +618,33 @@ async function carregarConfig(preencherConexao) {
 
 function extensao(item) {
   if (item.tipo !== "arquivo") return "";
-  const m = item.nome.match(/\.[A-Za-z0-9]{1,5}$/);
+  const m = item.nome.match(/\.[A-Za-z0-9]{1,6}$/);  // 6: .ffpfsc
   return m ? m[0] : "";
+}
+
+// ShadowMountPlus monta cada imagem em /mnt/shadowmnt/<nome sem extensão>_<hash de 8> (.ffpfsc em
+// /mnt/shadowmnt/pfsc/) e o kernel do PS5 (FreeBSD, MNAMELEN 88) recusa ponto de montagem com mais de
+// 87 caracteres ("File name too long"). Sobram 63 caracteres para o nome (58 no .ffpfsc): usa o menor.
+const EXT_IMAGEM_SMP = [".ffpkg", ".exfat", ".ffpfs", ".ffpfsc"];
+const MAX_NOME_IMAGEM_SMP = 58;
+
+const caminhoCompleto = (pasta, nome) => pasta.replace(/\/+$/, "") + "/" + nome;
+const semExtensao = nome => nome.replace(/\.[A-Za-z0-9]{1,6}$/, "");
+const imagemSmp = it => it.tipo === "arquivo" && EXT_IMAGEM_SMP.includes(extensao(it).toLowerCase());
+const nomeLongoSmp = (it, nome) => imagemSmp(it) && semExtensao(nome).length > MAX_NOME_IMAGEM_SMP;
+
+// Encurta só o título, mantendo o sufixo -TITLEID-REGIAO-PS5 (o que identifica o jogo).
+function encurtarNome(base, max) {
+  const i = base.search(/-[A-Z]{4}\d{5}(-[A-Z0-9]+)*$/);
+  if (i < 0) return base.slice(0, max);
+  const sufixo = base.slice(i), espaco = Math.max(1, max - sufixo.length);
+  let titulo = base.slice(0, i);
+  if (titulo.length > espaco) {
+    titulo = titulo.slice(0, espaco + 1);
+    const palavra = titulo.lastIndexOf("_");  // corta numa palavra inteira, se não perder demais
+    titulo = palavra > espaco / 2 ? titulo.slice(0, palavra) : titulo.slice(0, espaco);
+  }
+  return titulo.replace(/(_-)?_?[_-]*$/, "").replace(/[_-]+$/, "") + sufixo;
 }
 
 // Calcula o novo nome e se o item pode ser renomeado (sem sobrescrever nada).
@@ -616,7 +652,10 @@ function recalcular() {
   const existentes = {}, alvos = {};
   for (const it of itensFtp) (existentes[it.pasta] ??= new Set()).add(it.nome);
   for (const it of itensFtp) {
-    it.novo = it.info?.status === "ok" ? it.info.nome_arquivo + extensao(it) : "";
+    // Patch/backport não ganha nome novo (nem entra na conta de nomes repetidos).
+    it.novo = !it.patch && it.info?.status === "ok" ? it.info.nome_arquivo + extensao(it) : "";
+    it.encurtado = !!it.novo && nomeLongoSmp(it, it.novo);
+    if (it.encurtado) it.novo = encurtarNome(it.info.nome_arquivo, MAX_NOME_IMAGEM_SMP) + extensao(it);
     if (it.novo && it.novo !== it.nome) {
       const chave = it.pasta + "\n" + it.novo;
       alvos[chave] = (alvos[chave] || 0) + 1;
@@ -624,6 +663,7 @@ function recalcular() {
   }
   for (const it of itensFtp) {
     if (it.estado === "renomeando") continue;
+    if (it.patch) { it.estado = "neutro"; it.msg = ["st_patch"]; continue; }  // patch/backport: nunca renomeia
     if (!it.codigo) { it.estado = "neutro"; it.msg = ["st_sem_codigo"]; continue; }
     if (!it.info || it.info.status === "pendente") { it.estado = "pendente"; it.msg = ["st_consultando"]; continue; }
     if (it.info.status !== "ok") { it.estado = "erro"; it.msg = ["#status", it.info.status]; continue; }
@@ -636,9 +676,22 @@ function recalcular() {
   renderizarFtp();
 }
 
+// Tamanho do caminho completo (pasta + nome), antes e depois de renomear, e o aviso do ShadowMountPlus.
+function celTamanho(it) {
+  const atual = caminhoCompleto(it.pasta, it.nome).length;
+  const mudar = it.novo && it.novo !== it.nome;
+  let html = `<div class="tam">${esc(t("tam_caminho", { n: atual }))}`;
+  if (mudar) html += ` · ${esc(t("tam_novo", { n: caminhoCompleto(it.pasta, it.novo).length }))}`;
+  html += "</div>";
+  if (nomeLongoSmp(it, it.nome))
+    html += `<div class="tam tam-longo">${esc(t("tam_smp_longo", { n: semExtensao(it.nome).length, max: MAX_NOME_IMAGEM_SMP }))}</div>`;
+  if (mudar && it.encurtado) html += `<div class="tam">${esc(t("tag_encurtado"))}</div>`;
+  return html;
+}
+
 const textoMsg = msg => !msg ? "" : msg[0] === "#status" ? tStatus(msg[1]) : t(msg[0], msg[1]);
 
-const categoriaFtp = it => !it.codigo || (it.info && !["ok", "pendente"].includes(it.info.status)) ? "nao" : "encontrados";
+const categoriaFtp = it => it.patch || !it.codigo || (it.info && !["ok", "pendente"].includes(it.info.status)) ? "nao" : "encontrados";
 
 function renderizarFtp() {
   // Filtro: encontrados (jogo achado, ou ainda consultando) / não encontrados (sem código no nome
@@ -676,6 +729,7 @@ function renderizarFtp() {
         <div class="arq">${icone} ${esc(it.nome)}</div>
         ${it.novo && it.novo !== it.nome ? `<div class="arq novo">${esc(it.novo)}</div>` : ""}
         <div class="local">${esc(it.pasta)}</div>
+        ${celTamanho(it)}
       </td>
       <td class="st"><div class="${classe[it.estado] || ""}">${esc(textoMsg(it.msg))}</div>
         ${podeRenomear ? `<button class="renomear" data-i="${i}">${esc(t("btn_renomear"))}</button>` : ""}</td>
