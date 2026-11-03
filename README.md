@@ -8,7 +8,7 @@ PPSA08329-app.pkg          →  God_of_War_Ragnarok-PPSA08329-US-PS5.pkg
 CUSA07408 God of War.pkg   →  God_of_War-CUSA07408-US-PS4.pkg
 ```
 
-![Game Library Renamer](docs/screenshot.png)
+![Game Library Renamer](docs/screenshot-rename.png)
 
 ## Features
 
