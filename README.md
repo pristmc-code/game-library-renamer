@@ -1,6 +1,6 @@
 # Game Library Renamer
 
-Rename the game files and folders on your PS5 (or any FTP/SFTP server) to clean, readable names —
+Rename the game files on your PS5 (or any FTP/SFTP server) to clean, readable names —
 automatically, from the PS4/PS5 Title ID found in each name.
 
 ```
@@ -14,7 +14,7 @@ CUSA07408 God of War.pkg   →  God_of_War-CUSA07408-US-PS4.pkg
 
 - **Connects to your PS5 over FTP or SFTP** and reads only the root of the folders you choose
   (subfolders are never opened). Each folder shows whether it exists.
-- **Finds the Title ID** (`PPSA`, `CUSA`, …) in every file/folder name and shows the game name, cover,
+- **Finds the Title ID** (`PPSA`, `CUSA`, …) in every file name and shows the game name, cover,
   platform, region, publisher and Content ID.
 - **Proposes the new name** `Game_Name-TITLEID-REGION-PS4|PS5` (no accents or special characters,
   spaces become `_`, the file extension is kept) with a **Rename** button per game.
@@ -59,7 +59,7 @@ ShadowMountPlus mounts each image at `/mnt/shadowmnt/<name without extension>_<8
 characters ("File name too long"). So the image name without the extension must be at most 63
 characters (58 for `.ffpfsc`). For `.ffpkg`, `.exfat`, `.ffpfs` and `.ffpfsc` images the app keeps the
 name at 58 characters or less, shortening only the title and keeping `-TITLEID-REGION-PS5`, and
-flags images that are already too long. Folders and `.pkg` files are not affected.
+flags images that are already too long. `.pkg` files are not affected.
 
 ## Settings file
 
