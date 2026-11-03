@@ -116,4 +116,12 @@ trademarks of Sony Interactive Entertainment Inc.
 
 ## License
 
-[MIT](LICENSE) © PristMC
+Copyright © 2026 PristMC
+
+This program is free software: you can redistribute it and/or modify it under the terms of the
+[GNU General Public License](LICENSE) as published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version (GPL-3.0-or-later). It is distributed in the hope that it will be
+useful, but WITHOUT ANY WARRANTY; see the license for details.
+
+Releases published before November 3, 2026 (v1.0) were distributed under the MIT license and remain available
+under those terms.
